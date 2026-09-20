@@ -33,6 +33,7 @@
       <div class="stage is-empty" id="stage">
         <canvas id="artboard" width="1500" height="1000" tabindex="0" aria-label="Photo composition. Drag the Bitfoot head to move it, pinch to resize, twist to rotate, or use arrow keys for fine adjustments."></canvas>
         <div class="transform-frame" id="transformFrame" hidden aria-label="Avatar transform controls">
+          <button class="transform-handle remove-handle" id="removeHandle" type="button" aria-label="Remove avatar" title="Remove avatar">×</button>
           <button class="transform-handle rotate-handle" id="rotateHandle" type="button" aria-label="Drag to rotate avatar" title="Rotate">⟳</button>
           <button class="transform-handle scale-handle" id="scaleHandle" type="button" aria-label="Drag to resize avatar" title="Resize">⤢</button>
         </div>
@@ -83,13 +84,13 @@
 
       <div class="control-section">
         <div class="section-title"><span class="eyebrow">02 / ADJUST</span><h3>Fit the photo</h3></div>
-        <p class="gesture-note">Drag the head. Pinch to resize, twist to rotate, or use the yellow corner handles.</p>
+        <p class="gesture-note">Drag the head. Pinch to resize, twist to rotate, or use the yellow corner handles. Tap × to remove it.</p>
         <label class="slider-label" for="sizeSlider"><span>Head size</span><output id="sizeOutput">35%</output></label>
         <input id="sizeSlider" type="range" min="12" max="85" value="35" />
         <label class="slider-label" for="rotationSlider"><span>Rotation</span><output id="rotationOutput">0°</output></label>
         <input id="rotationSlider" type="range" min="-180" max="180" value="0" />
         <div class="toggle-row">
-          <label><input id="grayscaleToggle" type="checkbox" checked /><span class="toggle"></span><span>Black & white result (photo + avatar)</span></label>
+          <label><input id="grayscaleToggle" type="checkbox" /><span class="toggle"></span><span>Black & white result (photo + avatar)</span></label>
           <label><input id="flipToggle" type="checkbox" /><span class="toggle"></span><span>Flip head</span></label>
         </div>
       </div>

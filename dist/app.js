@@ -17,6 +17,7 @@ const downloadBtn = document.querySelector("#downloadBtn");
 const copyBtn = document.querySelector("#copyBtn");
 const resetBtn = document.querySelector("#resetBtn");
 const transformFrame = document.querySelector("#transformFrame");
+const removeHandle = document.querySelector("#removeHandle");
 const rotateHandle = document.querySelector("#rotateHandle");
 const scaleHandle = document.querySelector("#scaleHandle");
 const sourceMarker = document.querySelector("#sourceMarker");
@@ -59,11 +60,12 @@ const heads = Array.from({ length: 18 }, (_, index) => {
 const state = {
   photoReady: false,
   head: 0,
+  headVisible: true,
   x: .5,
   y: .35,
   size: 35,
   rotation: 0,
-  grayscale: true,
+  grayscale: false,
   flip: false,
   repairMode: false,
   pickSource: false,
@@ -124,7 +126,7 @@ function stagePoint(x, y) {
 
 function syncOverlays() {
   const image = heads[state.head];
-  transformFrame.hidden = !state.photoReady || state.repairMode || !image.complete || !image.naturalWidth;
+  transformFrame.hidden = !state.photoReady || !state.headVisible || state.repairMode || !image.complete || !image.naturalWidth;
   if (!transformFrame.hidden) {
     const { width, height } = headDimensions();
     const rect = canvas.getBoundingClientRect();
@@ -156,13 +158,24 @@ function render() {
   ctx.save();
   ctx.filter = state.grayscale ? "grayscale(1) contrast(1.04)" : "none";
   drawPhoto();
-  if (!state.repairMode) drawHead();
+  if (state.headVisible && !state.repairMode) drawHead();
   ctx.restore();
   syncOverlays();
 }
 
 function syncHeadSelection() {
-  [...headGrid.children].forEach((button, index) => button.setAttribute("aria-checked", String(index === state.head)));
+  [...headGrid.children].forEach((button, index) => button.setAttribute("aria-checked", String(state.headVisible && index === state.head)));
+}
+
+function syncAvatarControls() {
+  const editable = state.photoReady && state.headVisible && !state.repairMode;
+  downloadBtn.disabled = !editable;
+  copyBtn.disabled = !editable;
+  resetBtn.disabled = !editable;
+  sizeSlider.disabled = state.photoReady && !editable;
+  rotationSlider.disabled = state.photoReady && !editable;
+  flipToggle.disabled = state.photoReady && !editable;
+  syncHeadSelection();
 }
 
 function createHeadButtons() {
@@ -191,11 +204,14 @@ function createHeadButtons() {
     else image.addEventListener("load", () => { paintThumb(); queueRender(); }, { once: true });
     button.addEventListener("click", () => {
       state.head = index;
-      syncHeadSelection();
+      state.headVisible = true;
+      syncAvatarControls();
       queueRender();
-      say(state.photoReady
-        ? `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Drag it over your face.`
-        : `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Choose a photo to begin.`);
+      say(!state.photoReady
+        ? `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Choose a photo to begin.`
+        : state.repairMode
+          ? `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Finish retouching to see it.`
+          : `Bitfoot ${String(index + 1).padStart(2, "0")} added. Drag it over your face.`);
     });
     headGrid.append(button);
   });
@@ -203,6 +219,7 @@ function createHeadButtons() {
 }
 
 function resetHead() {
+  state.headVisible = true;
   state.x = .5;
   state.y = .35;
   state.size = 35;
@@ -211,8 +228,17 @@ function resetHead() {
   syncTransformControls();
   flipToggle.checked = false;
   hintEl.classList.remove("hidden");
+  syncAvatarControls();
   queueRender();
   say("Head position and size reset.");
+}
+
+function removeHead() {
+  state.headVisible = false;
+  hintEl.classList.add("hidden");
+  syncAvatarControls();
+  queueRender();
+  say("Avatar removed. Choose a Bitfoot below to add one again.");
 }
 
 function syncTransformControls() {
@@ -225,6 +251,9 @@ function syncTransformControls() {
 function usePhoto(image) {
   setImageSize(image);
   state.photoReady = true;
+  state.headVisible = true;
+  state.grayscale = false;
+  grayscaleToggle.checked = false;
   state.repairMode = false;
   state.pickSource = false;
   state.sourcePoint = null;
@@ -236,9 +265,6 @@ function usePhoto(image) {
   undoButton.disabled = true;
   emptyEl.hidden = true;
   stage.classList.remove("is-empty");
-  downloadBtn.disabled = false;
-  copyBtn.disabled = false;
-  resetBtn.disabled = false;
   repairToggle.disabled = false;
   resetHead();
   say("Photo ready. Drag the head, pinch to resize, or twist to rotate.");
@@ -414,6 +440,7 @@ canvas.addEventListener("pointerdown", event => {
   if (!state.photoReady) return;
   event.preventDefault();
   if (state.repairMode) { repairPointerDown(event); return; }
+  if (!state.headVisible) return;
   canvas.setPointerCapture(event.pointerId);
   activePointers.set(event.pointerId, pointerPoint(event));
   canvas.classList.add("dragging");
@@ -478,7 +505,7 @@ canvas.addEventListener("pointercancel", event => endPointer(event, true));
 function attachTransformHandle(button, type) {
   let start = null;
   button.addEventListener("pointerdown", event => {
-    if (!state.photoReady || state.repairMode) return;
+    if (!state.photoReady || !state.headVisible || state.repairMode) return;
     event.preventDefault();
     event.stopPropagation();
     button.setPointerCapture(event.pointerId);
@@ -517,9 +544,10 @@ function attachTransformHandle(button, type) {
 }
 attachTransformHandle(scaleHandle, "scale");
 attachTransformHandle(rotateHandle, "rotate");
+removeHandle.addEventListener("click", removeHead);
 
 canvas.addEventListener("keydown", event => {
-  if (!state.photoReady) return;
+  if (!state.photoReady || !state.headVisible || state.repairMode) return;
   const step = event.shiftKey ? .02 : .005;
   if (event.key === "ArrowLeft") state.x -= step;
   else if (event.key === "ArrowRight") state.x += step;
@@ -552,16 +580,16 @@ function setRepairMode(enabled) {
   repairToggle.setAttribute("aria-pressed", String(enabled));
   repairToggle.textContent = enabled ? "✓ Done retouching" : "✦ Clean stray hair";
   stage.classList.toggle("repairing", enabled);
-  downloadBtn.disabled = enabled;
-  copyBtn.disabled = enabled;
-  resetBtn.disabled = enabled;
+  syncAvatarControls();
   brushCursor.hidden = true;
   if (enabled) {
     hintEl.classList.add("hidden");
     say(state.pickSource ? "Tap a clean background area to sample it." : "Brush over stray hair, or pick a new clean area.");
   } else {
     sourceMarker.hidden = true;
-    say("Retouch saved. Drag, resize, or rotate your Bitfoot, then download.");
+    say(state.headVisible
+      ? "Retouch saved. Drag, resize, or rotate your Bitfoot, then download."
+      : "Retouch saved. Choose a Bitfoot to add one again.");
   }
   queueRender();
 }
@@ -600,7 +628,7 @@ stage.addEventListener("drop", event => {
 });
 
 downloadBtn.addEventListener("click", async () => {
-  if (!state.photoReady || state.repairMode) return;
+  if (!state.photoReady || !state.headVisible || state.repairMode) return;
   render();
   const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
   if (!blob) { say("Export failed. Please try again."); return; }
@@ -614,7 +642,7 @@ downloadBtn.addEventListener("click", async () => {
 });
 
 copyBtn.addEventListener("click", async () => {
-  if (!state.photoReady || state.repairMode) return;
+  if (!state.photoReady || !state.headVisible || state.repairMode) return;
   try {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);

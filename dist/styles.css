@@ -72,6 +72,7 @@ h1 { margin: 8px 0 5px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; }
 .transform-frame[hidden], .source-marker[hidden], .brush-cursor[hidden] { display: none; }
 .transform-handle { position: absolute; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 2px solid #171a20; border-radius: 50%; background: #ffbd2e; color: #171a20; box-shadow: 2px 2px 0 rgba(23,26,32,.5); font-size: 24px; font-weight: 800; line-height: 1; pointer-events: auto; touch-action: none; cursor: grab; }
 .transform-handle:active { cursor: grabbing; }
+.remove-handle { top: -23px; left: -23px; background: #fff; font-size: 30px; }
 .rotate-handle { top: -23px; right: -23px; }
 .scale-handle { right: -23px; bottom: -23px; }
 .source-marker { position: absolute; z-index: 3; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #171a20; border-radius: 50%; background: #ffbd2e; color: #171a20; font-size: 20px; line-height: 1; pointer-events: none; transform: translate(-50%,-50%); }
