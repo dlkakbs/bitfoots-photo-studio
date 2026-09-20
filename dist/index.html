@@ -62,14 +62,14 @@
         <span>Touch up hair outside the pixel head.</span>
       </div>
       <div class="repair-options" id="repairOptions" hidden>
-        <p><strong>Background repair</strong> copies a nearby clean area over stray hair. Best for small edges and simple backgrounds.</p>
-        <label class="slider-label" for="brushSlider"><span>Brush width</span><output id="brushOutput">26 px</output></label>
-        <input id="brushSlider" type="range" min="10" max="80" value="26" />
+        <p><strong>Protected background repair</strong> replaces hair that differs from your clean sample while preserving similar background pixels.</p>
+        <label class="slider-label" for="brushSlider"><span>Brush width</span><output id="brushOutput">18 px</output></label>
+        <input id="brushSlider" type="range" min="6" max="56" value="18" />
         <div class="repair-actions">
           <button class="button button-light" id="sourceButton" type="button">Pick clean area</button>
           <button class="button button-light" id="undoButton" type="button" disabled>Undo stroke</button>
         </div>
-        <small>Tap clean background, then brush over visible hair. Tap “Pick clean area” to sample another spot.</small>
+        <small>The Bitfoot stays visible as your edge guide. Sample close to the hair, then use short strokes only over the visible strands.</small>
       </div>
       <p class="status" id="status" role="status">Choose a photo to begin.</p>
     </section>

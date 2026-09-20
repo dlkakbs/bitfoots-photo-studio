@@ -33,8 +33,6 @@ const repairCanvas = document.createElement("canvas");
 const repairCtx = repairCanvas.getContext("2d");
 const strokeSource = document.createElement("canvas");
 const strokeSourceCtx = strokeSource.getContext("2d");
-const stampCanvas = document.createElement("canvas");
-const stampCtx = stampCanvas.getContext("2d");
 
 // Opaque-pixel bounds for the original PNGs. Cropping only transparent margins
 // makes the same size setting visually consistent without changing head pixels.
@@ -158,7 +156,7 @@ function render() {
   ctx.save();
   ctx.filter = state.grayscale ? "grayscale(1) contrast(1.04)" : "none";
   drawPhoto();
-  if (state.headVisible && !state.repairMode) drawHead();
+  if (state.headVisible) drawHead();
   ctx.restore();
   syncOverlays();
 }
@@ -362,30 +360,55 @@ function updateBrushCursor(event) {
 
 function stampAt(x, y) {
   const radius = repairStroke.radius;
-  const diameter = Math.max(2, Math.ceil(radius * 2));
-  if (stampCanvas.width !== diameter) {
-    stampCanvas.width = diameter;
-    stampCanvas.height = diameter;
+  const left = Math.max(0, Math.floor(x - radius));
+  const top = Math.max(0, Math.floor(y - radius));
+  const right = Math.min(repairCanvas.width, Math.ceil(x + radius));
+  const bottom = Math.min(repairCanvas.height, Math.ceil(y + radius));
+  const width = right - left;
+  const height = bottom - top;
+  if (width <= 0 || height <= 0) return;
+
+  const target = repairCtx.getImageData(left, top, width, height);
+  const original = strokeSourceCtx.getImageData(left, top, width, height);
+  const source = strokeSourceCtx.getImageData(
+    Math.round(left + repairStroke.offsetX),
+    Math.round(top + repairStroke.offsetY),
+    width,
+    height
+  );
+  const innerRadius = radius * .48;
+  const featherWidth = Math.max(1, radius - innerRadius);
+
+  for (let row = 0; row < height; row++) {
+    for (let column = 0; column < width; column++) {
+      const targetX = left + column;
+      const targetY = top + row;
+      const dx = targetX + .5 - x;
+      const dy = targetY + .5 - y;
+      const distanceFromCenter = Math.hypot(dx, dy);
+      if (distanceFromCenter >= radius) continue;
+
+      const targetIndex = (row * width + column) * 4;
+      if (source.data[targetIndex + 3] === 0) continue;
+      const redDifference = source.data[targetIndex] - original.data[targetIndex];
+      const greenDifference = source.data[targetIndex + 1] - original.data[targetIndex + 1];
+      const blueDifference = source.data[targetIndex + 2] - original.data[targetIndex + 2];
+      const colorDifference = Math.hypot(redDifference, greenDifference, blueDifference);
+
+      // Preserve pixels that already resemble the sampled background. This keeps
+      // the brush from repainting the surrounding wall, sky, or other backdrop.
+      const differenceMix = clamp((colorDifference - 24) / 64, 0, 1);
+      if (differenceMix <= 0) continue;
+      const edgeMix = distanceFromCenter <= innerRadius
+        ? 1
+        : 1 - (distanceFromCenter - innerRadius) / featherWidth;
+      const mix = differenceMix * edgeMix * .94;
+      target.data[targetIndex] += (source.data[targetIndex] - target.data[targetIndex]) * mix;
+      target.data[targetIndex + 1] += (source.data[targetIndex + 1] - target.data[targetIndex + 1]) * mix;
+      target.data[targetIndex + 2] += (source.data[targetIndex + 2] - target.data[targetIndex + 2]) * mix;
+    }
   }
-  stampCtx.clearRect(0, 0, diameter, diameter);
-  const center = diameter / 2;
-  const left = x + repairStroke.offsetX - center;
-  const top = y + repairStroke.offsetY - center;
-  const sx = Math.max(0, Math.floor(left));
-  const sy = Math.max(0, Math.floor(top));
-  const ex = Math.min(strokeSource.width, Math.ceil(left + diameter));
-  const ey = Math.min(strokeSource.height, Math.ceil(top + diameter));
-  if (ex > sx && ey > sy) {
-    stampCtx.drawImage(strokeSource, sx, sy, ex - sx, ey - sy, sx - left, sy - top, ex - sx, ey - sy);
-    const fade = stampCtx.createRadialGradient(center, center, radius * .55, center, center, radius);
-    fade.addColorStop(0, "rgba(0,0,0,1)");
-    fade.addColorStop(1, "rgba(0,0,0,0)");
-    stampCtx.globalCompositeOperation = "destination-in";
-    stampCtx.fillStyle = fade;
-    stampCtx.fillRect(0, 0, diameter, diameter);
-    stampCtx.globalCompositeOperation = "source-over";
-    repairCtx.drawImage(stampCanvas, x - center, y - center);
-  }
+  repairCtx.putImageData(target, left, top);
 }
 
 function startRepairStroke(point, pointerId) {
@@ -584,7 +607,7 @@ function setRepairMode(enabled) {
   brushCursor.hidden = true;
   if (enabled) {
     hintEl.classList.add("hidden");
-    say(state.pickSource ? "Tap a clean background area to sample it." : "Brush over stray hair, or pick a new clean area.");
+    say(state.pickSource ? "Tap clean background beside the visible hair." : "Use short strokes over hair outside the Bitfoot edge.");
   } else {
     sourceMarker.hidden = true;
     say(state.headVisible
