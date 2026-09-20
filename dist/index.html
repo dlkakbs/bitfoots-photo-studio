@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101419" />
+    <meta name="description" content="Create cinematic Bitfoots sightings with all 18 original heads and eight shielded forest scenes." />
+    <title>Bitfoots Sighting Studio</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314171c'/%3E%3Cpath d='M12 4h8v12h-3v4h-3v8H8v-9h2V9h2z' fill='%23eaba49'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#studio" aria-label="Bitfoots Sighting Studio home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span>
+          <b>BITFOOTS</b>
+          <small>SIGHTING STUDIO</small>
+        </span>
+      </a>
+      <div class="topbar-meta" aria-label="Studio status">
+        <span><i class="pulse"></i> SHIELD ACTIVE</span>
+        <span>18 ORIGINAL HEADS</span>
+      </div>
+      <button class="action ghost" id="randomizeTop" type="button">Random sighting</button>
+    </header>
+
+    <main id="studio" class="studio-shell">
+      <aside class="panel scene-panel" aria-labelledby="sceneHeading">
+        <div class="panel-heading">
+          <span class="eyebrow">01 / WORLD</span>
+          <h1 id="sceneHeading">Choose a sighting</h1>
+          <p>Eight scenes from the shielded forest.</p>
+        </div>
+        <div class="scene-list" id="sceneList" role="radiogroup" aria-label="Scene"></div>
+      </aside>
+
+      <section class="stage-column" aria-labelledby="previewHeading">
+        <div class="stage-head">
+          <div>
+            <span class="eyebrow">LIVE FIELD RECORD</span>
+            <h2 id="previewHeading"><span id="activeSceneName">Shielded Forest</span></h2>
+          </div>
+          <div class="stage-status"><span id="formatReadout">SQUARE · 1800 × 1800</span></div>
+        </div>
+
+        <div class="canvas-frame" id="canvasFrame">
+          <canvas id="artboard" width="1800" height="1800" aria-label="Generated Bitfoots sighting preview"></canvas>
+          <div class="loading-veil" id="loadingVeil" role="status">
+            <span class="scanner"></span>
+            <b>LOCATING BITFOOT</b>
+          </div>
+          <div class="frame-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        </div>
+
+        <div class="stage-actions">
+          <button class="action primary" id="downloadBtn" type="button">
+            <span>Download high-res PNG</span><b>↓</b>
+          </button>
+          <button class="action" id="copyBtn" type="button">Copy image</button>
+          <button class="action icon-action" id="randomizeBtn" type="button" aria-label="Randomize composition">↻</button>
+        </div>
+        <p class="notice" id="notice" aria-live="polite">Original avatar pixels are preserved in every export.</p>
+      </section>
+
+      <aside class="panel controls-panel" aria-labelledby="controlsHeading">
+        <div class="panel-heading compact">
+          <span class="eyebrow">02 / SUBJECT</span>
+          <h2 id="controlsHeading">Build the record</h2>
+        </div>
+
+        <section class="control-section">
+          <div class="section-row">
+            <h3>Original head</h3>
+            <span id="headLabel">01 / 18</span>
+          </div>
+          <div class="head-grid" id="headGrid" role="radiogroup" aria-label="Bitfoot head"></div>
+        </section>
+
+        <section class="control-section partner-control" id="partnerControl" hidden>
+          <div class="section-row">
+            <h3>Vouch partner</h3>
+            <span id="partnerLabel">02 / 18</span>
+          </div>
+          <select id="partnerSelect" aria-label="Vouch partner"></select>
+        </section>
+
+        <section class="control-section fields">
+          <label>
+            <span>Field note</span>
+            <input id="fieldNote" type="text" maxlength="48" value="THE FOREST REMEMBERS QUIET FEET" />
+          </label>
+          <div class="field-pair">
+            <label>
+              <span>Sighting</span>
+              <input id="sightingNumber" type="number" min="1" max="303" value="87" />
+            </label>
+            <label>
+              <span>Format</span>
+              <select id="formatSelect">
+                <option value="square">Square 1:1</option>
+                <option value="portrait">Portrait 3:4</option>
+                <option value="wide">Wide 16:9</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="control-section sliders">
+          <label>
+            <span>Visibility <output id="visibilityValue">88%</output></span>
+            <input id="visibility" type="range" min="18" max="100" value="88" />
+          </label>
+          <label>
+            <span>Fog density <output id="fogValue">42%</output></span>
+            <input id="fog" type="range" min="0" max="100" value="42" />
+          </label>
+          <label id="lightControl" hidden>
+            <span>Lantern position <output id="lightValue">56%</output></span>
+            <input id="lightPosition" type="range" min="10" max="90" value="56" />
+          </label>
+        </section>
+
+        <section class="control-section format-note">
+          <span class="pixel-lock" aria-hidden="true"></span>
+          <div><b>TRUE PIXEL MODE</b><p>No smoothing, redrawing or generated avatar substitutions.</p></div>
+        </section>
+      </aside>
+    </main>
+
+    <template id="sceneTemplate">
+      <button class="scene-card" type="button" role="radio" aria-checked="false">
+        <span class="scene-index"></span>
+        <span class="scene-copy"><b></b><small></small></span>
+        <span class="scene-arrow">↗</span>
+      </button>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
