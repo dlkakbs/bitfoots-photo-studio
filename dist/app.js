@@ -87,10 +87,7 @@ function setImageSize(image) {
 }
 
 function drawPhoto() {
-  ctx.save();
-  ctx.filter = state.grayscale ? "grayscale(1) contrast(1.04)" : "none";
   ctx.drawImage(repairCanvas, 0, 0);
-  ctx.restore();
 }
 
 function headDimensions() {
@@ -156,8 +153,11 @@ function queueRender() {
 function render() {
   if (!state.photoReady) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.filter = state.grayscale ? "grayscale(1) contrast(1.04)" : "none";
   drawPhoto();
   if (!state.repairMode) drawHead();
+  ctx.restore();
   syncOverlays();
 }
 
