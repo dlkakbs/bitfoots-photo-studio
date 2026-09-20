@@ -1,662 +1,699 @@
-(() => {
-  "use strict";
+const canvas = document.querySelector("#artboard");
+const ctx = canvas.getContext("2d", { alpha: false });
 
-  const GOLD = "#eaba49";
-  const HEADING = "#ffddcc";
-  const TEXT = "#aab6c9";
-  const INK = "#101419";
+const templates = [
+  {
+    id: "shield", name: "Shielded Forest", note: "public trail / private ape",
+    top: "WHEN THEY ASK FOR YOUR WALLET HISTORY", bottom: "BUT YOU CAME SHIELDED",
+    pose: "hands", outfit: "hoodie", x: .67, y: .78, scale: 80
+  },
+  {
+    id: "lantern", name: "Lantern Sweep", note: "caught in the spotlight",
+    top: "ME CHECKING THE CHART AT 3AM", bottom: "THE CHART CHECKING ME BACK",
+    pose: "pointing", outfit: "auto", x: .43, y: .79, scale: 80
+  },
+  {
+    id: "trail", name: "Vanishing Trail", note: "leave no trace",
+    top: "THEY SAID EVERYTHING IS ONCHAIN", bottom: "ME LEAVING ZERO FOOTPRINTS",
+    pose: "walking", outfit: "robe", x: .62, y: .81, scale: 77
+  },
+  {
+    id: "inside", name: "Inside the Shield", note: "calm inside / chaos outside",
+    top: "THE TIMELINE DURING VOLATILITY", bottom: "ME INSIDE THE SHIELD",
+    pose: "drink", outfit: "zcash", x: .5, y: .81, scale: 74
+  },
+  {
+    id: "watcher", name: "Watcher Eyes", note: "privacy paranoia reaction",
+    top: "WHEN THE BLOCK EXPLORER", bottom: "STARTS LOOKING BACK",
+    pose: "standing", outfit: "suit", x: .5, y: .8, scale: 78
+  },
+  {
+    id: "vouch", name: "The Vouch Trail", note: "two apes / one receipt",
+    top: "TRUST ME BRO", bottom: "NO — VOUCH FOR ME ONCHAIN",
+    pose: "vouch", outfit: "auto", x: .34, y: .81, scale: 66, partner: true
+  },
+  {
+    id: "ordinal", name: "Lost Ordinal", note: "2.5 years later",
+    top: "BOUGHT IT FOR THE ART", bottom: "CHECKED THE FLOOR 2.5 YEARS LATER",
+    pose: "pointing", outfit: "sport", x: .69, y: .81, scale: 70
+  },
+  {
+    id: "sighting", name: "303 Sighting", note: "classic mugshot energy",
+    top: "RARE BITFOOT SPOTTED", bottom: "LAST SEEN AVOIDING KYC",
+    pose: "standing", outfit: "zcash", x: .5, y: .81, scale: 78
+  }
+];
 
-  const scenes = [
-    { id: "forest", name: "Shielded Forest", short: "Hidden in plain sight", plate: "forest" },
-    { id: "lantern", name: "Lantern Sweep", short: "Caught by a narrow beam", plate: "forest" },
-    { id: "trail", name: "Vanishing Trail", short: "Footprints fade behind you", plate: "forest" },
-    { id: "shield", name: "Inside the Shield", short: "Encrypted beyond the ledger", plate: "shield" },
-    { id: "eyes", name: "Watcher Eyes", short: "The forest looks back", plate: "forest" },
-    { id: "vouch", name: "The Vouch Trail", short: "Trust passed through the woods", plate: "forest" },
-    { id: "ordinal", name: "Lost Ordinal", short: "Recovered after 2.5 years", plate: "archive" },
-    { id: "sighting", name: "303 Sighting", short: "An official field record", plate: "forest" }
-  ];
+const headPalettes = [
+  ["#672337", "#3b1525", "#f0d6bd", "#ffbd2e"], ["#7e3032", "#431c24", "#efc6a7", "#ffbd2e"],
+  ["#172f4e", "#0d1b31", "#f2e7d3", "#ef6a24"], ["#762b31", "#43161d", "#e8bda2", "#f7e5c7"],
+  ["#263957", "#101c31", "#cf9f70", "#ff9b25"], ["#7f3335", "#452029", "#f2d7bb", "#f4f0e6"],
+  ["#233652", "#111d33", "#d79b63", "#ef6a24"], ["#4f596e", "#25304a", "#c19d76", "#ffbd2e"],
+  ["#e95c8b", "#711e51", "#f1c3b3", "#111c36"], ["#45c9e7", "#157da9", "#d4f3f5", "#ffffff"],
+  ["#74563e", "#3d2b25", "#cf9f6f", "#f1e5d2"], ["#237566", "#12433d", "#c8aa7e", "#45a78c"],
+  ["#463e67", "#221f3d", "#b49a82", "#ffbd2e"], ["#7c252d", "#3d1424", "#ddb098", "#e72e4b"],
+  ["#596274", "#28344e", "#cab197", "#e8344e"], ["#545e72", "#24304a", "#c9a68d", "#e9324e"],
+  ["#e94d1e", "#9d2714", "#ffad3c", "#ffbd2e"], ["#623d79", "#2d2148", "#d5a7bc", "#ef6a24"]
+].map(([shirt, shade, skin, accent]) => ({ shirt, shade, skin, accent }));
 
-  const formats = {
-    square: { width: 1800, height: 1800, label: "SQUARE" },
-    portrait: { width: 1350, height: 1800, label: "PORTRAIT" },
-    wide: { width: 1920, height: 1080, label: "WIDE" }
-  };
+const formatSizes = {
+  square: [1800, 1800],
+  portrait: [1440, 1800],
+  wide: [1920, 1080]
+};
 
-  const state = {
-    scene: "forest",
-    head: 0,
-    partner: 1,
-    note: "THE FOREST REMEMBERS QUIET FEET",
-    sighting: 87,
-    visibility: 88,
-    fog: 42,
-    light: 56,
-    format: "square",
-    seed: 19087
-  };
+const state = {
+  template: 0,
+  head: 0,
+  outfit: "hoodie",
+  pose: "hands",
+  topText: templates[0].top,
+  bottomText: templates[0].bottom,
+  textStyle: "classic",
+  format: "square",
+  scale: 80,
+  fontSize: 68,
+  x: templates[0].x,
+  y: templates[0].y,
+  flip: false,
+  showTag: true,
+  customImage: null,
+  customName: "Custom template"
+};
 
-  const $ = (selector) => document.querySelector(selector);
-  const canvas = $("#artboard");
-  const ctx = canvas.getContext("2d", { alpha: false });
-  const sceneList = $("#sceneList");
-  const headGrid = $("#headGrid");
-  const partnerSelect = $("#partnerSelect");
-  const assets = { heads: [], plates: {} };
-  let renderFrame = 0;
+const els = {
+  templateGrid: document.querySelector("#templateGrid"),
+  headStrip: document.querySelector("#headStrip"),
+  previewTitle: document.querySelector("#previewTitle"),
+  resolution: document.querySelector("#resolutionReadout"),
+  headCount: document.querySelector("#headCount"),
+  outfit: document.querySelector("#outfitSelect"),
+  pose: document.querySelector("#poseSelect"),
+  topText: document.querySelector("#topText"),
+  bottomText: document.querySelector("#bottomText"),
+  textStyle: document.querySelector("#textStyle"),
+  format: document.querySelector("#formatSelect"),
+  scale: document.querySelector("#characterScale"),
+  fontSize: document.querySelector("#fontSize"),
+  scaleValue: document.querySelector("#scaleValue"),
+  fontValue: document.querySelector("#fontValue"),
+  flip: document.querySelector("#flipCharacter"),
+  showTag: document.querySelector("#showTag"),
+  upload: document.querySelector("#backgroundUpload"),
+  loading: document.querySelector("#loading"),
+  dragHint: document.querySelector("#dragHint"),
+  status: document.querySelector("#statusLine")
+};
 
-  const loadImage = (src) => new Promise((resolve, reject) => {
-    const image = new Image();
-    image.decoding = "async";
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Could not load ${src}`));
-    image.src = src;
+const heads = Array.from({ length: 18 }, (_, i) => {
+  const img = new Image();
+  img.src = `./assets/heads/bitfoot-head-${String(i + 1).padStart(2, "0")}.png`;
+  return img;
+});
+
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+const currentTemplate = () => templates[state.template] || null;
+
+function block(c, x, y, w, h, color) {
+  c.fillStyle = color;
+  c.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+
+function labelBlock(c, text, x, y, options = {}) {
+  const size = options.size || 26;
+  c.save();
+  c.font = `900 ${size}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  c.textBaseline = "middle";
+  const width = c.measureText(text).width + size * 1.05;
+  block(c, x, y, width, size * 1.65, options.background || "#111318");
+  c.fillStyle = options.color || "#ffbd2e";
+  c.fillText(text, x + size * .52, y + size * .84);
+  c.restore();
+}
+
+function drawEye(c, x, y, unit, color = "#ffbd2e") {
+  block(c, x, y, unit * 3, unit * 2, "rgba(17,19,24,.72)");
+  block(c, x + unit, y + unit * .5, unit, unit, color);
+}
+
+function drawFootprint(c, x, y, unit, color, alpha = 1, rotate = 0) {
+  c.save();
+  c.globalAlpha = alpha;
+  c.translate(x, y);
+  c.rotate(rotate);
+  block(c, -unit * .55, -unit * .65, unit * 1.1, unit * 2.25, color);
+  block(c, -unit * 1.05, -unit * 1.45, unit * .58, unit * .72, color);
+  block(c, -unit * .3, -unit * 1.72, unit * .58, unit * .72, color);
+  block(c, unit * .45, -unit * 1.42, unit * .58, unit * .72, color);
+  c.restore();
+}
+
+function drawBackdrop(c, w, h) {
+  const t = currentTemplate();
+  c.imageSmoothingEnabled = false;
+
+  if (!t && state.customImage) {
+    const img = state.customImage;
+    const scale = Math.max(w / img.width, h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    c.fillStyle = "#111318";
+    c.fillRect(0, 0, w, h);
+    c.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    c.fillStyle = "rgba(17,19,24,.08)";
+    c.fillRect(0, 0, w, h);
+    return;
+  }
+
+  const id = t?.id || "shield";
+  if (id === "shield") {
+    block(c, 0, 0, w, h, "#ffbd2e");
+    block(c, 0, 0, w * .44, h, "#111318");
+    block(c, w * .44, 0, w * .025, h, "#f26c21");
+    const u = Math.max(8, w / 130);
+    for (let row = 0; row < 5; row++) for (let col = 0; col < 3; col++) drawEye(c, w * .06 + col * w * .12, h * .22 + row * h * .13, u, row % 2 ? "#f4f0e6" : "#ffbd2e");
+    labelBlock(c, "PUBLIC", w * .055, h * .08, { size: w * .026, background: "#f4f0e6", color: "#111318" });
+    labelBlock(c, "SHIELDED", w * .51, h * .08, { size: w * .026 });
+    block(c, w * .55, h * .22, w * .38, h * .53, "rgba(255,255,255,.2)");
+    block(c, w * .57, h * .245, w * .34, h * .48, "rgba(255,255,255,.16)");
+  }
+
+  if (id === "lantern") {
+    block(c, 0, 0, w, h, "#151821");
+    const grid = w / 14;
+    c.strokeStyle = "rgba(255,255,255,.08)";
+    c.lineWidth = Math.max(2, w / 500);
+    for (let x = 0; x < w; x += grid) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = 0; y < h; y += grid) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+    c.fillStyle = "#ffcf55";
+    c.beginPath(); c.moveTo(w * .8, 0); c.lineTo(w * .08, h); c.lineTo(w * .77, h); c.closePath(); c.fill();
+    block(c, w * .71, 0, w * .18, h * .08, "#f4f0e6");
+    block(c, w * .75, h * .08, w * .1, h * .045, "#f26c21");
+    labelBlock(c, "CAUGHT IN 4K", w * .06, h * .08, { size: w * .028, background: "#e94a34", color: "#fff" });
+  }
+
+  if (id === "trail") {
+    block(c, 0, 0, w, h, "#f3eee2");
+    block(c, 0, h * .67, w, h * .33, "#d9d1c2");
+    c.fillStyle = "#ef6a24";
+    c.beginPath(); c.moveTo(w * .1, h); c.lineTo(w * .58, h * .15); c.lineTo(w * .83, h * .15); c.lineTo(w * .63, h); c.closePath(); c.fill();
+    c.fillStyle = "#ffbd2e";
+    c.beginPath(); c.moveTo(w * .16, h); c.lineTo(w * .61, h * .15); c.lineTo(w * .65, h * .15); c.lineTo(w * .27, h); c.closePath(); c.fill();
+    for (let i = 0; i < 5; i++) drawFootprint(c, w * (.2 + i * .085), h * (.78 - i * .12), w * (.025 - i * .002), "#111318", 1 - i * .17, -.28);
+    labelBlock(c, "NO TRACE", w * .06, h * .08, { size: w * .03, background: "#111318", color: "#ffbd2e" });
+  }
+
+  if (id === "inside") {
+    block(c, 0, 0, w, h, "#e94a34");
+    const u = w / 34;
+    for (let i = 0; i < 13; i++) {
+      block(c, (i * 2.9 % 31) * u, ((i * 5.3) % 22 + 3) * u, u * 1.7, u * .65, i % 2 ? "#111318" : "#ffbd2e");
+    }
+    c.fillStyle = "#55c8e9";
+    c.beginPath();
+    c.arc(w * .5, h * .53, Math.min(w, h) * .39, Math.PI, 0);
+    c.lineTo(w * .84, h * .82); c.quadraticCurveTo(w * .5, h * .97, w * .16, h * .82); c.closePath(); c.fill();
+    c.strokeStyle = "#111318"; c.lineWidth = w * .018; c.stroke();
+    block(c, w * .21, h * .56, w * .58, h * .25, "rgba(255,255,255,.16)");
+    labelBlock(c, "SAFE ZONE", w * .055, h * .07, { size: w * .028 });
+  }
+
+  if (id === "watcher") {
+    block(c, 0, 0, w, h, "#331d45");
+    const unit = Math.max(9, w / 110);
+    for (let r = 0; r < 5; r++) for (let col = 0; col < 5; col++) {
+      const x = w * .05 + col * w * .205 + (r % 2) * w * .05;
+      const y = h * .12 + r * h * .17;
+      drawEye(c, x, y, unit, (r + col) % 3 ? "#ffbd2e" : "#55c8e9");
+    }
+    block(c, w * .27, h * .15, w * .46, h * .72, "rgba(17,19,24,.68)");
+    c.strokeStyle = "#ffbd2e"; c.lineWidth = w * .008; c.strokeRect(w * .29, h * .17, w * .42, h * .68);
+    labelBlock(c, "WHO'S WATCHING?", w * .055, h * .06, { size: w * .024, background: "#f4f0e6", color: "#331d45" });
+  }
+
+  if (id === "vouch") {
+    block(c, 0, 0, w, h, "#ffbd2e");
+    block(c, w * .5, 0, w * .5, h, "#55c8e9");
+    for (let y = 0; y < h; y += h / 9) block(c, w * .487, y, w * .026, h / 18, "#111318");
+    block(c, w * .43, h * .38, w * .14, h * .18, "#f4f0e6");
+    c.strokeStyle = "#111318"; c.lineWidth = w * .008; c.strokeRect(w * .43, h * .38, w * .14, h * .18);
+    labelBlock(c, "VOUCH RECEIPT", w * .055, h * .07, { size: w * .028 });
+  }
+
+  if (id === "ordinal") {
+    block(c, 0, 0, w, h, "#f2ecdf");
+    block(c, w * .5, 0, w * .5, h, "#6f3d8f");
+    block(c, w * .49, 0, w * .02, h, "#111318");
+    labelBlock(c, "DAY 1", w * .06, h * .08, { size: w * .028, background: "#111318", color: "#ffbd2e" });
+    labelBlock(c, "2.5 YEARS LATER", w * .56, h * .08, { size: w * .021, background: "#ffbd2e", color: "#111318" });
+    block(c, w * .075, h * .27, w * .35, h * .5, "#d9d0c2");
+    c.fillStyle = "rgba(17,19,24,.15)";
+    for (let i = 0; i < 8; i++) block(c, w * (.095 + (i % 2) * .19), h * (.3 + i * .055), w * .13, h * .018, "rgba(17,19,24,.14)");
+  }
+
+  if (id === "sighting") {
+    block(c, 0, 0, w, h, "#f6f1e6");
+    block(c, 0, 0, w, h * .08, "#e8493f");
+    block(c, 0, h * .92, w, h * .08, "#111318");
+    c.strokeStyle = "#9e9688"; c.lineWidth = Math.max(2, w / 600);
+    for (let i = 0; i < 8; i++) {
+      const y = h * (.18 + i * .09); c.beginPath(); c.moveTo(w * .12, y); c.lineTo(w * .88, y); c.stroke();
+      c.fillStyle = "#777066"; c.font = `800 ${w * .016}px ui-monospace, monospace`; c.fillText(`${4 + i}'`, w * .075, y + w * .006);
+    }
+    labelBlock(c, "SIGHTING #303", w * .055, h * .02, { size: w * .025, background: "#e8493f", color: "#fff" });
+    block(c, w * .73, h * .77, w * .17, h * .09, "#ffbd2e");
+    c.save(); c.translate(w * .815, h * .815); c.rotate(-.08); c.fillStyle = "#111318"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `900 ${w * .026}px ui-monospace, monospace`; c.fillText("WANTED", 0, 0); c.restore();
+  }
+}
+
+function resolvePalette(index, outfit) {
+  const base = { ...headPalettes[index] };
+  if (outfit === "zcash") return { ...base, shirt: "#f4f1e6", shade: "#d5cfc0", accent: "#ffbd2e" };
+  if (outfit === "hoodie") return { ...base, shirt: "#238673", shade: "#124c46", accent: "#48b89a" };
+  if (outfit === "suit") return { ...base, shirt: "#152b4c", shade: "#0a182f", accent: "#e33f55" };
+  if (outfit === "robe") return { ...base, shirt: "#eee9d7", shade: "#d4cebc", accent: "#a69aa3" };
+  if (outfit === "sport") return { ...base, shirt: "#239ee0", shade: "#176fb4", accent: "#e43652" };
+  return base;
+}
+
+function drawBody(c, palette, outfit, pose) {
+  const { shirt, shade, skin, accent } = palette;
+
+  if (outfit === "hoodie") {
+    block(c, -142, -460, 284, 295, shade);
+    block(c, -119, -440, 238, 260, shirt);
+  }
+
+  block(c, -54, -225, 108, 58, skin);
+  block(c, -170, -183, 340, 70, shirt);
+  block(c, -139, -127, 278, 248, shirt);
+  block(c, -139, -127, 48, 248, shade);
+  block(c, 91, -127, 48, 248, accent);
+
+  if (outfit === "zcash") {
+    block(c, -18, -82, 36, 136, accent);
+    block(c, -53, -34, 106, 28, accent);
+    block(c, -52, 37, 103, 24, accent);
+  }
+  if (outfit === "suit") {
+    block(c, -15, -112, 30, 218, "#f4f0e6");
+    block(c, -11, -105, 22, 190, accent);
+    block(c, -88, -127, 73, 72, "#1f3962");
+    block(c, 15, -127, 73, 72, "#1f3962");
+  }
+  if (outfit === "robe") {
+    for (let i = 0; i < 6; i++) block(c, -88 + i * 25, -126 + i * 34, 25, 50, accent);
+  }
+  if (outfit === "sport") {
+    block(c, -139, -84, 278, 25, "#f4f0e6");
+    block(c, -14, -127, 28, 248, accent);
+  }
+
+  if (pose === "standing") {
+    block(c, -201, -122, 63, 251, shirt); block(c, 139, -122, 63, 251, shirt);
+    block(c, -201, 98, 63, 70, skin); block(c, 139, 98, 63, 70, skin);
+  }
+  if (pose === "pointing") {
+    block(c, -201, -122, 63, 248, shirt); block(c, -201, 96, 63, 66, skin);
+    block(c, 139, -116, 154, 62, shirt); block(c, 274, -116, 62, 62, skin);
+    block(c, 322, -145, 105, 27, skin); block(c, 394, -171, 31, 53, skin);
+  }
+  if (pose === "hands") {
+    block(c, -202, -117, 65, 176, shirt); block(c, 139, -117, 65, 176, shirt);
+    block(c, -180, 42, 78, 55, skin); block(c, 102, 42, 78, 55, skin);
+    block(c, -138, 71, 57, 66, skin); block(c, 81, 71, 57, 66, skin);
+  }
+  if (pose === "walking") {
+    block(c, -214, -137, 66, 207, shirt); block(c, -230, 42, 66, 67, skin);
+    block(c, 138, -116, 64, 180, shirt); block(c, 166, 42, 64, 67, skin);
+  }
+  if (pose === "vouch") {
+    block(c, -202, -120, 64, 246, shirt); block(c, -202, 96, 64, 66, skin);
+    block(c, 138, -113, 164, 63, shirt); block(c, 284, -113, 68, 63, skin);
+    block(c, 335, -132, 81, 100, "#ffbd2e"); block(c, 349, -116, 53, 13, "#111318"); block(c, 349, -87, 37, 12, "#111318");
+  }
+  if (pose === "drink") {
+    block(c, -202, -120, 64, 246, shirt); block(c, -202, 96, 64, 66, skin);
+    block(c, 138, -115, 72, 196, shirt); block(c, 180, 49, 62, 62, skin);
+    block(c, 207, -57, 66, 132, "#26a7e6"); block(c, 220, -91, 40, 44, "#26a7e6"); block(c, 207, 1, 66, 21, "#ffbd2e");
+  }
+
+  if (pose === "walking") {
+    block(c, -117, 105, 102, 205, shade); block(c, 14, 105, 103, 154, shirt);
+    block(c, -148, 281, 133, 48, "#111318"); block(c, 14, 230, 133, 48, "#111318");
+  } else {
+    block(c, -119, 105, 105, 205, shade); block(c, 14, 105, 105, 205, shirt);
+    block(c, -145, 280, 131, 49, "#111318"); block(c, 14, 280, 131, 49, "#111318");
+  }
+}
+
+function drawHead(c, image) {
+  if (!image?.complete || !image.naturalWidth) return;
+  const height = 365;
+  const width = height * (image.naturalWidth / image.naturalHeight);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(image, -width / 2, -520, width, height);
+}
+
+function drawCharacter(c, { x, y, scale, head, outfit, pose, flip = false, alpha = 1 }) {
+  const artScale = (canvas.width / 1200) * (scale / 100);
+  c.save();
+  c.globalAlpha = alpha;
+  c.translate(x, y);
+  c.scale((flip ? -1 : 1) * artScale, artScale);
+  drawBody(c, resolvePalette(head, outfit), outfit === "auto" ? "auto" : outfit, pose);
+  drawHead(c, heads[head]);
+  c.restore();
+}
+
+function characterPlacement() {
+  return { x: state.x * canvas.width, y: state.y * canvas.height, scale: state.scale, head: state.head, outfit: state.outfit, pose: state.pose, flip: state.flip };
+}
+
+function drawCharacters(c) {
+  const t = currentTemplate();
+  if (t?.id === "ordinal") {
+    drawCharacter(c, { x: canvas.width * .28, y: canvas.height * .79, scale: Math.max(46, state.scale * .72), head: state.head, outfit: state.outfit, pose: "standing", flip: false, alpha: .28 });
+  }
+  drawCharacter(c, characterPlacement());
+  if (t?.partner) {
+    drawCharacter(c, {
+      x: canvas.width * .72,
+      y: state.y * canvas.height,
+      scale: state.scale,
+      head: (state.head + 7) % heads.length,
+      outfit: "suit",
+      pose: "vouch",
+      flip: true,
+      alpha: 1
+    });
+  }
+}
+
+function wrappedLines(c, text, maxWidth) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+  words.forEach(word => {
+    const attempt = line ? `${line} ${word}` : word;
+    if (line && c.measureText(attempt).width > maxWidth) { lines.push(line); line = word; }
+    else line = attempt;
   });
+  if (line) lines.push(line);
+  return lines.slice(0, 3);
+}
 
-  const headPath = (index) => `./assets/heads/bitfoot-head-${String(index + 1).padStart(2, "0")}.png`;
+function fitText(c, text, requestedSize, maxWidth) {
+  let size = requestedSize;
+  let lines;
+  do {
+    c.font = `900 ${size}px Impact, Haettenschweiler, "Arial Black", sans-serif`;
+    lines = wrappedLines(c, text, maxWidth);
+    if (lines.length <= 2 && lines.every(line => c.measureText(line).width <= maxWidth)) break;
+    size -= 4;
+  } while (size > 32);
+  return { size, lines };
+}
 
-  function createSceneControls() {
-    const template = $("#sceneTemplate");
-    scenes.forEach((scene, index) => {
-      const fragment = template.content.cloneNode(true);
-      const button = fragment.querySelector("button");
-      button.dataset.scene = scene.id;
-      button.querySelector(".scene-index").textContent = String(index + 1).padStart(2, "0");
-      button.querySelector("b").textContent = scene.name;
-      button.querySelector("small").textContent = scene.short;
-      button.setAttribute("aria-checked", String(scene.id === state.scene));
-      button.addEventListener("click", () => selectScene(scene.id));
-      sceneList.appendChild(fragment);
+function drawCaption(c, text, position) {
+  if (!text.trim()) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const base = state.fontSize * (w / 1000);
+  const maxWidth = w * .88;
+  const content = state.textStyle === "classic" ? text.toUpperCase() : text;
+  const fitted = fitText(c, content, base, maxWidth);
+  const lineHeight = fitted.size * 1.03;
+  const totalHeight = fitted.lines.length * lineHeight;
+  const isTop = position === "top";
+  const yStart = isTop ? h * .045 : h - h * .045 - totalHeight + lineHeight;
+
+  c.save();
+  c.font = `900 ${fitted.size}px Impact, Haettenschweiler, "Arial Black", sans-serif`;
+  c.textAlign = "center";
+  c.textBaseline = "middle";
+  c.lineJoin = "round";
+
+  if (state.textStyle === "boxed") {
+    const pad = fitted.size * .38;
+    const boxHeight = totalHeight + pad * 1.3;
+    const boxY = isTop ? 0 : h - boxHeight;
+    block(c, 0, boxY, w, boxHeight, "#111318");
+    c.fillStyle = "#f4f0e6";
+    fitted.lines.forEach((line, i) => c.fillText(line, w / 2, boxY + pad * .65 + lineHeight * (i + .5)));
+  } else if (state.textStyle === "clean") {
+    const widest = Math.max(...fitted.lines.map(line => c.measureText(line).width));
+    const boxHeight = totalHeight + fitted.size * .45;
+    const boxY = yStart - lineHeight * .56;
+    block(c, (w - widest) / 2 - fitted.size * .3, boxY, widest + fitted.size * .6, boxHeight, "#f4f0e6");
+    c.fillStyle = "#111318";
+    fitted.lines.forEach((line, i) => c.fillText(line, w / 2, yStart + i * lineHeight));
+  } else {
+    c.lineWidth = Math.max(8, fitted.size * .13);
+    c.strokeStyle = "#111318";
+    c.fillStyle = "#fff";
+    fitted.lines.forEach((line, i) => {
+      c.strokeText(line, w / 2, yStart + i * lineHeight);
+      c.fillText(line, w / 2, yStart + i * lineHeight);
     });
   }
+  c.restore();
+}
 
-  function createHeadControls() {
-    for (let index = 0; index < 18; index += 1) {
-      const button = document.createElement("button");
-      button.className = "head-option";
-      button.type = "button";
-      button.setAttribute("role", "radio");
-      button.setAttribute("aria-label", `Bitfoot head ${index + 1}`);
-      button.setAttribute("aria-checked", String(index === state.head));
-      button.innerHTML = `<img src="${headPath(index)}" alt="" draggable="false">`;
-      button.addEventListener("click", () => selectHead(index));
-      headGrid.appendChild(button);
+function drawTag(c) {
+  if (!state.showTag) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const pad = w * .022;
+  c.save();
+  c.font = `900 ${w * .015}px ui-monospace, SFMono-Regular, monospace`;
+  const text = "FOOTPRINT LAB · BITFOOTS";
+  const width = c.measureText(text).width + pad;
+  block(c, w - width - pad * .55, h * .86, width, w * .03, "rgba(17,19,24,.78)");
+  c.fillStyle = "#ffbd2e"; c.textAlign = "left"; c.textBaseline = "middle";
+  c.fillText(text, w - width - pad * .12, h * .875);
+  c.restore();
+}
 
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = `Bitfoot ${String(index + 1).padStart(2, "0")}`;
-      partnerSelect.appendChild(option);
-    }
-    partnerSelect.value = String(state.partner);
-  }
+let framePending = false;
+function requestRender() {
+  if (framePending) return;
+  framePending = true;
+  requestAnimationFrame(() => { framePending = false; render(); });
+}
 
-  function selectScene(id) {
-    state.scene = id;
-    sceneList.querySelectorAll(".scene-card").forEach((button) => {
-      button.setAttribute("aria-checked", String(button.dataset.scene === id));
+function render() {
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackdrop(ctx, canvas.width, canvas.height);
+  drawCharacters(ctx);
+  drawCaption(ctx, state.topText, "top");
+  drawCaption(ctx, state.bottomText, "bottom");
+  drawTag(ctx);
+  ctx.restore();
+}
+
+function buildTemplateCards() {
+  const template = document.querySelector("#templateCard");
+  templates.forEach((item, index) => {
+    const node = template.content.firstElementChild.cloneNode(true);
+    node.dataset.template = item.id;
+    node.querySelector(".template-copy b").textContent = item.name;
+    node.querySelector(".template-copy small").textContent = item.note;
+    node.querySelector(".template-number").textContent = String(index + 1).padStart(2, "0");
+    node.addEventListener("click", () => selectTemplate(index));
+    els.templateGrid.append(node);
+  });
+}
+
+function buildHeads() {
+  heads.forEach((image, index) => {
+    const button = document.createElement("button");
+    button.className = "head-button";
+    button.type = "button";
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-label", `Bitfoot ${String(index + 1).padStart(2, "0")}`);
+    const thumb = new Image();
+    thumb.src = image.src;
+    thumb.alt = "";
+    button.append(thumb);
+    button.addEventListener("click", () => {
+      state.head = index;
+      els.headCount.textContent = `${String(index + 1).padStart(2, "0")} / 18`;
+      syncSelections();
+      requestRender();
     });
-    const active = scenes.find((scene) => scene.id === id);
-    $("#activeSceneName").textContent = active.name;
-    $("#partnerControl").hidden = id !== "vouch";
-    $("#lightControl").hidden = id !== "lantern";
-    scheduleRender();
-  }
+    els.headStrip.append(button);
+  });
+}
 
-  function selectHead(index) {
-    state.head = index;
-    headGrid.querySelectorAll(".head-option").forEach((button, at) => {
-      button.setAttribute("aria-checked", String(at === index));
-    });
-    $("#headLabel").textContent = `${String(index + 1).padStart(2, "0")} / 18`;
-    scheduleRender();
-  }
+function selectTemplate(index, applyCopy = true) {
+  const item = templates[index];
+  state.template = index;
+  state.customImage = null;
+  state.x = item.x; state.y = item.y; state.scale = item.scale;
+  state.pose = item.pose; state.outfit = item.outfit;
+  if (applyCopy) { state.topText = item.top; state.bottomText = item.bottom; }
+  syncControls();
+  requestRender();
+}
 
-  function bindControls() {
-    const bindings = [
-      ["#fieldNote", "input", (event) => { state.note = event.target.value.toUpperCase(); }],
-      ["#sightingNumber", "input", (event) => { state.sighting = clamp(Number(event.target.value) || 1, 1, 303); }],
-      ["#visibility", "input", (event) => { state.visibility = Number(event.target.value); $("#visibilityValue").textContent = `${state.visibility}%`; }],
-      ["#fog", "input", (event) => { state.fog = Number(event.target.value); $("#fogValue").textContent = `${state.fog}%`; }],
-      ["#lightPosition", "input", (event) => { state.light = Number(event.target.value); $("#lightValue").textContent = `${state.light}%`; }],
-      ["#formatSelect", "change", (event) => { state.format = event.target.value; setCanvasFormat(); }],
-      ["#partnerSelect", "change", (event) => { state.partner = Number(event.target.value); $("#partnerLabel").textContent = `${String(state.partner + 1).padStart(2, "0")} / 18`; }]
-    ];
-    bindings.forEach(([selector, event, update]) => {
-      $(selector).addEventListener(event, (inputEvent) => { update(inputEvent); scheduleRender(); });
-    });
-    $("#randomizeBtn").addEventListener("click", randomize);
-    $("#randomizeTop").addEventListener("click", randomize);
-    $("#downloadBtn").addEventListener("click", downloadImage);
-    $("#copyBtn").addEventListener("click", copyImage);
-  }
+function syncSelections() {
+  [...els.templateGrid.children].forEach((button, index) => button.setAttribute("aria-checked", String(!state.customImage && index === state.template)));
+  [...els.headStrip.children].forEach((button, index) => button.setAttribute("aria-checked", String(index === state.head)));
+}
 
-  function setCanvasFormat() {
-    const format = formats[state.format];
-    canvas.width = format.width;
-    canvas.height = format.height;
-    $("#canvasFrame").style.aspectRatio = `${format.width} / ${format.height}`;
-    $("#formatReadout").textContent = `${format.label} · ${format.width} × ${format.height}`;
-    scheduleRender();
-  }
+function syncControls() {
+  const item = currentTemplate();
+  els.previewTitle.textContent = state.customImage ? state.customName : item.name;
+  els.outfit.value = state.outfit;
+  els.pose.value = state.pose;
+  els.topText.value = state.topText;
+  els.bottomText.value = state.bottomText;
+  els.textStyle.value = state.textStyle;
+  els.format.value = state.format;
+  els.scale.value = state.scale;
+  els.fontSize.value = state.fontSize;
+  els.flip.checked = state.flip;
+  els.showTag.checked = state.showTag;
+  els.scaleValue.textContent = `${state.scale}%`;
+  els.fontValue.textContent = `${state.fontSize}px`;
+  syncSelections();
+}
 
-  function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); }
-  function pad(value, size = 3) { return String(value).padStart(size, "0"); }
-  function mulberry32(seed) {
-    return () => {
-      let t = seed += 0x6D2B79F5;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+function setFormat(value) {
+  state.format = value;
+  const [w, h] = formatSizes[value];
+  canvas.width = w;
+  canvas.height = h;
+  els.resolution.textContent = `${w} × ${h}`;
+  requestRender();
+}
+
+function bindInputs() {
+  const bindings = [
+    [els.outfit, "change", () => { state.outfit = els.outfit.value; requestRender(); }],
+    [els.pose, "change", () => { state.pose = els.pose.value; requestRender(); }],
+    [els.topText, "input", () => { state.topText = els.topText.value; requestRender(); }],
+    [els.bottomText, "input", () => { state.bottomText = els.bottomText.value; requestRender(); }],
+    [els.textStyle, "change", () => { state.textStyle = els.textStyle.value; requestRender(); }],
+    [els.format, "change", () => setFormat(els.format.value)],
+    [els.scale, "input", () => { state.scale = Number(els.scale.value); els.scaleValue.textContent = `${state.scale}%`; requestRender(); }],
+    [els.fontSize, "input", () => { state.fontSize = Number(els.fontSize.value); els.fontValue.textContent = `${state.fontSize}px`; requestRender(); }],
+    [els.flip, "change", () => { state.flip = els.flip.checked; requestRender(); }],
+    [els.showTag, "change", () => { state.showTag = els.showTag.checked; requestRender(); }]
+  ];
+  bindings.forEach(([element, event, handler]) => element.addEventListener(event, handler));
+
+  document.querySelector("#downloadBtn").addEventListener("click", downloadImage);
+  document.querySelector("#copyBtn").addEventListener("click", copyImage);
+  document.querySelector("#resetPosition").addEventListener("click", () => {
+    const t = currentTemplate() || { x: .5, y: .8, scale: 80 };
+    state.x = t.x; state.y = t.y; state.scale = t.scale;
+    syncControls(); requestRender();
+  });
+  document.querySelector("#randomizeTop").addEventListener("click", randomize);
+
+  els.upload.addEventListener("change", event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = new Image();
+      image.onload = () => {
+        state.customImage = image;
+        state.customName = file.name.replace(/\.[^.]+$/, "");
+        state.x = .5; state.y = .8; state.scale = 78;
+        els.previewTitle.textContent = state.customName;
+        syncSelections(); requestRender();
+        setStatus("Custom template loaded locally.");
+      };
+      image.src = reader.result;
     };
+    reader.readAsDataURL(file);
+  });
+}
+
+function randomize() {
+  const index = Math.floor(Math.random() * templates.length);
+  state.head = Math.floor(Math.random() * heads.length);
+  state.flip = Math.random() > .6;
+  selectTemplate(index, true);
+  els.headCount.textContent = `${String(state.head + 1).padStart(2, "0")} / 18`;
+  syncControls();
+  setStatus("Fresh Bitfoot meme assembled.");
+}
+
+function setStatus(message, error = false) {
+  els.status.lastChild.textContent = ` ${message}`;
+  els.status.querySelector("i").style.background = error ? "#e8493f" : "#32a85b";
+}
+
+function downloadImage() {
+  render();
+  const link = document.createElement("a");
+  const slug = (currentTemplate()?.id || "custom").replace(/[^a-z0-9]+/g, "-");
+  link.download = `bitfoots-${slug}-${String(state.head + 1).padStart(2, "0")}.png`;
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+  setStatus("High-resolution PNG downloaded.");
+}
+
+async function copyImage() {
+  try {
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+    setStatus("Meme copied to clipboard.");
+  } catch {
+    setStatus("Clipboard access was blocked. Use Download PNG.", true);
   }
+}
 
-  function drawCover(image, x = 0, y = 0, width = canvas.width, height = canvas.height, zoom = 1) {
-    const scale = Math.max(width / image.width, height / image.height) * zoom;
-    const sw = width / scale;
-    const sh = height / scale;
-    const sx = (image.width - sw) / 2;
-    const sy = (image.height - sh) / 2;
-    ctx.drawImage(image, sx, sy, sw, sh, x, y, width, height);
-  }
+let dragging = false;
+function pointerPosition(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: clamp((event.clientX - rect.left) / rect.width, .08, .92),
+    y: clamp((event.clientY - rect.top) / rect.height + .1, .42, .96)
+  };
+}
 
-  function drawAvatar(image, centerX, baseY, maxWidth, maxHeight, alpha = 1, glow = 0) {
-    const ratio = Math.min(maxWidth / image.width, maxHeight / image.height);
-    const width = Math.round(image.width * ratio);
-    const height = Math.round(image.height * ratio);
-    const x = Math.round(centerX - width / 2);
-    const y = Math.round(baseY - height);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.imageSmoothingEnabled = false;
-    if (glow > 0) {
-      ctx.shadowColor = `rgba(234, 186, 73, ${glow})`;
-      ctx.shadowBlur = Math.round(canvas.width * 0.025);
-    }
-    ctx.drawImage(image, x, y, width, height);
-    ctx.restore();
-    return { x, y, width, height };
-  }
+canvas.addEventListener("pointerdown", event => {
+  dragging = true;
+  canvas.setPointerCapture(event.pointerId);
+  canvas.classList.add("dragging");
+  els.dragHint.classList.add("hidden");
+  Object.assign(state, pointerPosition(event));
+  requestRender();
+});
+canvas.addEventListener("pointermove", event => {
+  if (!dragging) return;
+  Object.assign(state, pointerPosition(event));
+  requestRender();
+});
+canvas.addEventListener("pointerup", event => {
+  dragging = false;
+  canvas.releasePointerCapture(event.pointerId);
+  canvas.classList.remove("dragging");
+});
+canvas.addEventListener("pointercancel", () => { dragging = false; canvas.classList.remove("dragging"); });
 
-  function drawBasePlate(name, zoom = 1) {
-    ctx.fillStyle = INK;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawCover(assets.plates[name], 0, 0, canvas.width, canvas.height, zoom);
-  }
+async function init() {
+  buildTemplateCards();
+  buildHeads();
+  bindInputs();
+  const params = new URLSearchParams(window.location.search);
+  const requestedTemplate = templates.findIndex(item => item.id === params.get("template"));
+  const requestedHead = Number(params.get("head"));
+  if (Number.isInteger(requestedHead) && requestedHead >= 1 && requestedHead <= heads.length) state.head = requestedHead - 1;
+  if (requestedTemplate >= 0) selectTemplate(requestedTemplate, true);
+  else syncControls();
+  els.headCount.textContent = `${String(state.head + 1).padStart(2, "0")} / 18`;
+  setFormat(state.format);
+  await Promise.all(heads.map(image => image.complete ? Promise.resolve() : new Promise(resolve => { image.onload = resolve; image.onerror = resolve; })));
+  render();
+  els.loading.classList.add("hide");
+}
 
-  function drawFog(amount, seedOffset = 0) {
-    if (amount <= 0) return;
-    const random = mulberry32(state.seed + seedOffset);
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    for (let i = 0; i < 9; i += 1) {
-      const x = random() * canvas.width;
-      const y = canvas.height * (0.15 + random() * 0.75);
-      const radius = canvas.width * (0.12 + random() * 0.32);
-      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      gradient.addColorStop(0, `rgba(150, 174, 198, ${0.018 + amount * 0.00055})`);
-      gradient.addColorStop(0.58, `rgba(112, 140, 165, ${0.01 + amount * 0.00026})`);
-      gradient.addColorStop(1, "rgba(70, 92, 116, 0)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-    }
-    ctx.restore();
-  }
-
-  function drawVignette(strength = 0.72) {
-    const radius = Math.max(canvas.width, canvas.height) * 0.72;
-    const gradient = ctx.createRadialGradient(canvas.width / 2, canvas.height * 0.48, radius * 0.12, canvas.width / 2, canvas.height * 0.52, radius);
-    gradient.addColorStop(0, "rgba(4, 7, 10, 0)");
-    gradient.addColorStop(0.64, `rgba(4, 7, 10, ${strength * 0.22})`);
-    gradient.addColorStop(1, `rgba(3, 5, 8, ${strength})`);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
-  function drawGrain(opacity = 0.08) {
-    const random = mulberry32(state.seed + 9001);
-    ctx.save();
-    ctx.globalAlpha = opacity;
-    for (let index = 0; index < 650; index += 1) {
-      const value = 125 + Math.floor(random() * 90);
-      ctx.fillStyle = `rgb(${value}, ${value}, ${value})`;
-      const size = random() > 0.88 ? 2 : 1;
-      ctx.fillRect(Math.floor(random() * canvas.width), Math.floor(random() * canvas.height), size, size);
-    }
-    ctx.restore();
-  }
-
-  function drawFoot(x, y, size, rotation, alpha, color = GOLD) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rotation);
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(0, size * 0.13, size * 0.17, size * 0.34, -0.16, 0, Math.PI * 2);
-    ctx.fill();
-    const toes = [-0.16, -0.055, 0.055, 0.16];
-    toes.forEach((offset, index) => {
-      ctx.beginPath();
-      ctx.arc(offset * size, -size * (0.23 + Math.abs(index - 1.5) * 0.015), size * (0.047 + (index === 1 || index === 2 ? 0.013 : 0)), 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  function drawForestScene() {
-    drawBasePlate("forest", 1.06);
-    const wash = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    wash.addColorStop(0, "rgba(6, 10, 16, 0.08)");
-    wash.addColorStop(1, "rgba(4, 7, 10, 0.44)");
-    ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawFog(state.fog, 11);
-    const w = canvas.width;
-    const h = canvas.height;
-    drawAvatar(assets.heads[state.head], w * 0.5, h * 0.82, w * 0.38, h * 0.58, state.visibility / 100, 0.16);
-    drawVignette(0.66);
-  }
-
-  function drawLanternScene() {
-    drawBasePlate("forest", 1.1);
-    drawFog(state.fog * 0.75, 21);
-    const w = canvas.width;
-    const h = canvas.height;
-    const avatar = drawAvatar(assets.heads[state.head], w * 0.5, h * 0.82, w * 0.39, h * 0.58, state.visibility / 100, 0.18);
-    const cx = w * (state.light / 100);
-    const cy = avatar.y + avatar.height * 0.46;
-    const radius = Math.max(w, h) * 0.32;
-    const dark = ctx.createRadialGradient(cx, cy, radius * 0.06, cx, cy, radius);
-    dark.addColorStop(0, "rgba(3, 6, 9, 0)");
-    dark.addColorStop(0.32, "rgba(3, 6, 9, 0.08)");
-    dark.addColorStop(0.62, "rgba(3, 6, 9, 0.78)");
-    dark.addColorStop(1, "rgba(1, 3, 5, 0.96)");
-    ctx.fillStyle = dark;
-    ctx.fillRect(0, 0, w, h);
-    const beam = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.7);
-    beam.addColorStop(0, "rgba(255, 211, 123, 0.18)");
-    beam.addColorStop(0.5, "rgba(234, 186, 73, 0.07)");
-    beam.addColorStop(1, "rgba(234, 186, 73, 0)");
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    ctx.fillStyle = beam;
-    ctx.fillRect(0, 0, w, h);
-    ctx.restore();
-    drawVignette(0.54);
-  }
-
-  function drawTrailScene() {
-    drawBasePlate("forest", 1.08);
-    const w = canvas.width;
-    const h = canvas.height;
-    drawFog(state.fog, 31);
-    for (let index = 0; index < 11; index += 1) {
-      const t = index / 10;
-      const x = w * (0.08 + t * 0.57 + Math.sin(t * 8) * 0.025);
-      const y = h * (0.86 - t * 0.29);
-      drawFoot(x, y, w * 0.032, -0.22 + Math.sin(t * 5) * 0.22, 0.05 + t * 0.78, GOLD);
-    }
-    drawAvatar(assets.heads[state.head], w * 0.68, h * 0.79, w * 0.34, h * 0.54, state.visibility / 100, 0.12);
-    drawVignette(0.68);
-  }
-
-  function drawShieldScene() {
-    drawBasePlate("shield", 1.03);
-    const w = canvas.width;
-    const h = canvas.height;
-    const min = Math.min(w, h);
-    const cx = w * 0.5;
-    const cy = h * 0.52;
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, min * 0.34, 0, Math.PI * 2);
-    ctx.clip();
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, min * 0.36);
-    glow.addColorStop(0, "rgba(234, 186, 73, 0.11)");
-    glow.addColorStop(0.7, "rgba(26, 40, 56, 0.04)");
-    glow.addColorStop(1, "rgba(10, 14, 18, 0.42)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, w, h);
-    drawAvatar(assets.heads[state.head], cx, h * 0.82, w * 0.36, h * 0.58, state.visibility / 100, 0.24);
-    ctx.restore();
-
-    const random = mulberry32(state.seed + 41);
-    for (let index = 0; index < 54; index += 1) {
-      const angle = random() * Math.PI * 2;
-      const radius = min * (0.29 + random() * 0.23);
-      const size = min * (0.006 + random() * 0.017);
-      const x = cx + Math.cos(angle) * radius;
-      const y = cy + Math.sin(angle) * radius;
-      ctx.fillStyle = random() > 0.72 ? "rgba(234, 186, 73, 0.58)" : "rgba(126, 151, 180, 0.35)";
-      ctx.fillRect(Math.round(x), Math.round(y), Math.round(size), Math.round(size));
-    }
-    drawFog(state.fog * 0.34, 42);
-    drawVignette(0.55);
-  }
-
-  function drawEyesScene() {
-    drawBasePlate("forest", 1.13);
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.fillStyle = "rgba(2, 4, 7, 0.52)";
-    ctx.fillRect(0, 0, w, h);
-    drawFog(state.fog * 0.58, 51);
-    drawAvatar(assets.heads[state.head], w * 0.52, h * 0.81, w * 0.37, h * 0.57, (state.visibility / 100) * 0.64, 0.04);
-    const random = mulberry32(state.seed + 52);
-    for (let index = 0; index < 14; index += 1) {
-      const x = w * (0.07 + random() * 0.86);
-      const y = h * (0.16 + random() * 0.58);
-      const size = Math.max(4, Math.round(w * (0.003 + random() * 0.004)));
-      const alpha = 0.16 + random() * 0.52;
-      ctx.fillStyle = `rgba(234, 186, 73, ${alpha})`;
-      ctx.fillRect(Math.round(x - size * 1.8), Math.round(y), size, size);
-      ctx.fillRect(Math.round(x + size * 0.8), Math.round(y), size, size);
-    }
-    drawVignette(0.82);
-  }
-
-  function drawVouchScene() {
-    drawBasePlate("forest", 1.04);
-    const w = canvas.width;
-    const h = canvas.height;
-    drawFog(state.fog * 0.8, 61);
-    const leftX = w * (state.format === "portrait" ? 0.36 : 0.34);
-    const rightX = w * (state.format === "portrait" ? 0.66 : 0.68);
-    const maxW = w * (state.format === "portrait" ? 0.35 : 0.31);
-    drawAvatar(assets.heads[state.head], leftX, h * 0.79, maxW, h * 0.5, state.visibility / 100, 0.12);
-    drawAvatar(assets.heads[state.partner], rightX, h * 0.79, maxW, h * 0.5, Math.max(0.54, state.visibility / 110), 0.12);
-    ctx.save();
-    ctx.strokeStyle = "rgba(234, 186, 73, 0.34)";
-    ctx.lineWidth = Math.max(2, w * 0.0015);
-    ctx.setLineDash([w * 0.008, w * 0.012]);
-    ctx.beginPath();
-    ctx.moveTo(leftX, h * 0.76);
-    ctx.quadraticCurveTo(w * 0.5, h * 0.67, rightX, h * 0.76);
-    ctx.stroke();
-    ctx.restore();
-    for (let index = 0; index < 6; index += 1) {
-      const t = index / 5;
-      drawFoot(leftX + (rightX - leftX) * t, h * (0.755 - Math.sin(t * Math.PI) * 0.085), w * 0.022, t % 2 ? 0.22 : -0.22, 0.34 + t * 0.08);
-    }
-    drawVignette(0.62);
-  }
-
-  function drawOrdinalScene() {
-    drawBasePlate("archive", 1.02);
-    const w = canvas.width;
-    const h = canvas.height;
-    const portrait = state.format === "portrait";
-    const avatarX = portrait ? w * 0.5 : w * 0.39;
-    const baseY = portrait ? h * 0.65 : h * 0.77;
-    const avatar = drawAvatar(assets.heads[state.head], avatarX, baseY, portrait ? w * 0.5 : w * 0.34, portrait ? h * 0.44 : h * 0.56, state.visibility / 100, 0.08);
-    ctx.save();
-    ctx.strokeStyle = "rgba(234, 186, 73, 0.5)";
-    ctx.lineWidth = Math.max(2, w * 0.0013);
-    ctx.strokeRect(avatar.x - w * 0.025, avatar.y - h * 0.025, avatar.width + w * 0.05, avatar.height + h * 0.05);
-    ctx.restore();
-
-    const lineY = (Date.now() / 26) % h;
-    const scanner = ctx.createLinearGradient(0, lineY - h * 0.035, 0, lineY + h * 0.035);
-    scanner.addColorStop(0, "rgba(244, 183, 40, 0)");
-    scanner.addColorStop(0.5, "rgba(244, 183, 40, 0.12)");
-    scanner.addColorStop(1, "rgba(244, 183, 40, 0)");
-    ctx.fillStyle = scanner;
-    ctx.fillRect(0, lineY - h * 0.035, w, h * 0.07);
-    drawGrain(0.13);
-  }
-
-  function drawSightingScene() {
-    drawBasePlate("forest", 1.12);
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.fillStyle = "rgba(3, 6, 9, 0.35)";
-    ctx.fillRect(0, 0, w, h);
-    drawFog(state.fog * 0.65, 71);
-    ctx.save();
-    ctx.globalAlpha = 0.16;
-    ctx.strokeStyle = GOLD;
-    ctx.lineWidth = Math.max(2, w * 0.003);
-    ctx.font = `700 ${Math.round(Math.min(w * 0.5, h * 0.45))}px ${getComputedStyle(document.documentElement).getPropertyValue("--mono")}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.strokeText("303", w * 0.5, h * 0.48);
-    ctx.restore();
-    drawAvatar(assets.heads[state.head], w * 0.5, h * 0.8, w * 0.34, h * 0.55, state.visibility / 100, 0.18);
-    drawVignette(0.58);
-  }
-
-  function drawRecordFrame(scene) {
-    const w = canvas.width;
-    const h = canvas.height;
-    const margin = Math.max(34, Math.round(Math.min(w, h) * 0.035));
-    const small = Math.max(19, Math.round(Math.min(w, h) * 0.015));
-    const medium = Math.max(28, Math.round(Math.min(w, h) * 0.024));
-    const mono = "SFMono-Regular, Consolas, Liberation Mono, monospace";
-    ctx.save();
-    ctx.strokeStyle = "rgba(234, 186, 73, 0.52)";
-    ctx.lineWidth = Math.max(2, Math.round(Math.min(w, h) * 0.00125));
-    const corner = Math.round(Math.min(w, h) * 0.04);
-    const left = margin;
-    const top = margin;
-    const right = w - margin;
-    const bottom = h - margin;
-    [[left, top, 1, 1], [right, top, -1, 1], [right, bottom, -1, -1], [left, bottom, 1, -1]].forEach(([x, y, dx, dy]) => {
-      ctx.beginPath();
-      ctx.moveTo(x, y + dy * corner);
-      ctx.lineTo(x, y);
-      ctx.lineTo(x + dx * corner, y);
-      ctx.stroke();
-    });
-
-    ctx.fillStyle = GOLD;
-    ctx.font = `600 ${small}px ${mono}`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText(`BITFOOTS / ${scene.name.toUpperCase()}`, margin + corner + small, margin - small * 0.35);
-    ctx.textAlign = "right";
-    ctx.fillText(`SIGHTING ${pad(state.sighting)} / 303`, w - margin - corner - small, margin - small * 0.35);
-
-    const footerY = h - margin - medium * 1.55;
-    ctx.fillStyle = "rgba(10, 14, 18, 0.68)";
-    ctx.fillRect(margin, footerY - medium * 0.44, w - margin * 2, medium * 2.6);
-    ctx.textAlign = "left";
-    ctx.fillStyle = HEADING;
-    ctx.font = `500 ${medium}px Georgia, Times New Roman, serif`;
-    const note = state.note.trim() || "NO TRACE REMAINS";
-    ctx.fillText(note.slice(0, 48), margin + small, footerY);
-    ctx.fillStyle = TEXT;
-    ctx.font = `500 ${small}px ${mono}`;
-    ctx.fillText(`VISIBILITY ${pad(state.visibility, 2)}%   ·   TRACE ${state.visibility < 50 ? "LOST" : "PARTIAL"}   ·   HEAD ${pad(state.head + 1, 2)}`, margin + small, footerY + medium * 1.25);
-    ctx.restore();
-  }
-
-  function render() {
-    renderFrame = 0;
-    if (!assets.heads.length || !assets.plates.forest) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const scene = scenes.find((item) => item.id === state.scene);
-    const renderScene = {
-      forest: drawForestScene,
-      lantern: drawLanternScene,
-      trail: drawTrailScene,
-      shield: drawShieldScene,
-      eyes: drawEyesScene,
-      vouch: drawVouchScene,
-      ordinal: drawOrdinalScene,
-      sighting: drawSightingScene
-    }[state.scene];
-    renderScene();
-    drawRecordFrame(scene);
-  }
-
-  function scheduleRender() {
-    if (renderFrame) return;
-    renderFrame = requestAnimationFrame(render);
-  }
-
-  function randomize() {
-    const scene = scenes[Math.floor(Math.random() * scenes.length)];
-    selectScene(scene.id);
-    selectHead(Math.floor(Math.random() * 18));
-    state.partner = (state.head + 1 + Math.floor(Math.random() * 16)) % 18;
-    partnerSelect.value = String(state.partner);
-    $("#partnerLabel").textContent = `${pad(state.partner + 1, 2)} / 18`;
-    state.sighting = 1 + Math.floor(Math.random() * 303);
-    $("#sightingNumber").value = String(state.sighting);
-    state.visibility = 44 + Math.floor(Math.random() * 57);
-    $("#visibility").value = String(state.visibility);
-    $("#visibilityValue").textContent = `${state.visibility}%`;
-    state.fog = 18 + Math.floor(Math.random() * 70);
-    $("#fog").value = String(state.fog);
-    $("#fogValue").textContent = `${state.fog}%`;
-    state.light = 20 + Math.floor(Math.random() * 60);
-    $("#lightPosition").value = String(state.light);
-    $("#lightValue").textContent = `${state.light}%`;
-    state.seed = Date.now() & 0xffffffff;
-    scheduleRender();
-  }
-
-  function canvasBlob() {
-    return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-  }
-
-  async function downloadImage() {
-    const blob = await canvasBlob();
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `bitfoots-${state.scene}-sighting-${pad(state.sighting)}.png`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showNotice(`High-resolution ${formats[state.format].width} × ${formats[state.format].height} PNG downloaded.`);
-  }
-
-  async function copyImage() {
-    if (!navigator.clipboard || !window.ClipboardItem) {
-      showNotice("Image copy is unavailable here. Use Download instead.");
-      return;
-    }
-    try {
-      const blob = await canvasBlob();
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      showNotice("Sighting copied to your clipboard.");
-    } catch {
-      showNotice("This browser blocked image copy. Use Download instead.");
-    }
-  }
-
-  function showNotice(message) {
-    const notice = $("#notice");
-    notice.textContent = message;
-    clearTimeout(showNotice.timer);
-    showNotice.timer = setTimeout(() => { notice.textContent = "Original avatar pixels are preserved in every export."; }, 3800);
-  }
-
-  async function preloadAssets() {
-    const headPromises = Array.from({ length: 18 }, (_, index) => loadImage(headPath(index)));
-    const [heads, forest, shield, archive] = await Promise.all([
-      Promise.all(headPromises),
-      loadImage("./assets/backgrounds/forest.png"),
-      loadImage("./assets/backgrounds/shield.png"),
-      loadImage("./assets/backgrounds/archive.png")
-    ]);
-    assets.heads = heads;
-    assets.plates = { forest, shield, archive };
-  }
-
-  async function start() {
-    applyQueryConfig();
-    createSceneControls();
-    createHeadControls();
-    selectScene(state.scene);
-    selectHead(state.head);
-    $("#formatSelect").value = state.format;
-    bindControls();
-    setCanvasFormat();
-    try {
-      await preloadAssets();
-      render();
-      $("#loadingVeil").classList.add("ready");
-      registerWebMcp();
-      if (state.scene === "ordinal" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        setInterval(scheduleRender, 120);
-      }
-    } catch (error) {
-      $("#loadingVeil").innerHTML = `<b>ASSET LOAD FAILED</b><small>${error.message}</small>`;
-    }
-  }
-
-  function applyQueryConfig() {
-    const query = new URLSearchParams(location.search);
-    const scene = query.get("scene");
-    const head = Number(query.get("head"));
-    const format = query.get("format");
-    if (scenes.some((item) => item.id === scene)) state.scene = scene;
-    if (Number.isInteger(head) && head >= 1 && head <= 18) state.head = head - 1;
-    if (formats[format]) state.format = format;
-  }
-
-  function registerWebMcp() {
-    const context = document.modelContext;
-    if (!context?.registerTool) return;
-    const lifecycle = new AbortController();
-    const sceneIds = scenes.map((scene) => scene.id);
-    try {
-      void Promise.resolve(context.registerTool({
-        name: "configure_bitfoot_sighting",
-        title: "Configure Bitfoot sighting",
-        description: "Configure the visible Bitfoots field record using an original head, one of the eight scenes, a sighting number, format, and optional field note.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            scene: { type: "string", enum: sceneIds },
-            head: { type: "integer", minimum: 1, maximum: 18 },
-            sighting: { type: "integer", minimum: 1, maximum: 303 },
-            format: { type: "string", enum: Object.keys(formats) },
-            fieldNote: { type: "string", maxLength: 48 }
-          },
-          additionalProperties: false
-        },
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        execute(input) {
-          if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("Input must be an object.");
-          if (input.scene !== undefined) {
-            if (!sceneIds.includes(input.scene)) throw new RangeError("Unknown scene.");
-            selectScene(input.scene);
-          }
-          if (input.head !== undefined) {
-            if (!Number.isInteger(input.head) || input.head < 1 || input.head > 18) throw new RangeError("Head must be an integer from 1 to 18.");
-            selectHead(input.head - 1);
-          }
-          if (input.sighting !== undefined) {
-            if (!Number.isInteger(input.sighting) || input.sighting < 1 || input.sighting > 303) throw new RangeError("Sighting must be an integer from 1 to 303.");
-            state.sighting = input.sighting;
-            $("#sightingNumber").value = String(input.sighting);
-          }
-          if (input.format !== undefined) {
-            if (!formats[input.format]) throw new RangeError("Unknown format.");
-            state.format = input.format;
-            $("#formatSelect").value = input.format;
-            setCanvasFormat();
-          }
-          if (input.fieldNote !== undefined) {
-            if (typeof input.fieldNote !== "string" || input.fieldNote.length > 48) throw new RangeError("Field note must be at most 48 characters.");
-            state.note = input.fieldNote.toUpperCase();
-            $("#fieldNote").value = state.note;
-          }
-          scheduleRender();
-          return {
-            scene: state.scene,
-            head: state.head + 1,
-            sighting: state.sighting,
-            format: state.format,
-            fieldNote: state.note
-          };
-        }
-      }, { signal: lifecycle.signal })).catch(() => {});
-    } catch {}
-  }
-
-  start();
-})();
+init();
