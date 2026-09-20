@@ -3,42 +3,42 @@ const ctx = canvas.getContext("2d", { alpha: false });
 
 const templates = [
   {
-    id: "shield", name: "Shielded Forest", note: "public trail / private ape",
+    id: "shield", name: "Shielded Forest", note: "two-panel choice meme",
     top: "WHEN THEY ASK FOR YOUR WALLET HISTORY", bottom: "BUT YOU CAME SHIELDED",
     pose: "hands", outfit: "hoodie", x: .67, y: .78, scale: 80
   },
   {
-    id: "lantern", name: "Lantern Sweep", note: "caught in the spotlight",
+    id: "lantern", name: "Lantern Sweep", note: "four-panel reaction",
     top: "ME CHECKING THE CHART AT 3AM", bottom: "THE CHART CHECKING ME BACK",
     pose: "pointing", outfit: "auto", x: .43, y: .79, scale: 80
   },
   {
-    id: "trail", name: "Vanishing Trail", note: "leave no trace",
+    id: "trail", name: "Vanishing Trail", note: "two-buttons dilemma",
     top: "THEY SAID EVERYTHING IS ONCHAIN", bottom: "ME LEAVING ZERO FOOTPRINTS",
     pose: "walking", outfit: "robe", x: .62, y: .81, scale: 77
   },
   {
-    id: "inside", name: "Inside the Shield", note: "calm inside / chaos outside",
+    id: "inside", name: "Inside the Shield", note: "this-is-fine format",
     top: "THE TIMELINE DURING VOLATILITY", bottom: "ME INSIDE THE SHIELD",
     pose: "drink", outfit: "zcash", x: .5, y: .81, scale: 74
   },
   {
-    id: "watcher", name: "Watcher Eyes", note: "privacy paranoia reaction",
+    id: "watcher", name: "Watcher Eyes", note: "double side-eye reaction",
     top: "WHEN THE BLOCK EXPLORER", bottom: "STARTS LOOKING BACK",
     pose: "standing", outfit: "suit", x: .5, y: .8, scale: 78
   },
   {
-    id: "vouch", name: "The Vouch Trail", note: "two apes / one receipt",
+    id: "vouch", name: "The Vouch Trail", note: "handshake meme",
     top: "TRUST ME BRO", bottom: "NO — VOUCH FOR ME ONCHAIN",
     pose: "vouch", outfit: "auto", x: .34, y: .81, scale: 66, partner: true
   },
   {
-    id: "ordinal", name: "Lost Ordinal", note: "2.5 years later",
+    id: "ordinal", name: "Lost Ordinal", note: "before / after meme",
     top: "BOUGHT IT FOR THE ART", bottom: "CHECKED THE FLOOR 2.5 YEARS LATER",
     pose: "pointing", outfit: "sport", x: .69, y: .81, scale: 70
   },
   {
-    id: "sighting", name: "303 Sighting", note: "classic mugshot energy",
+    id: "sighting", name: "303 Sighting", note: "CCTV breaking news",
     top: "RARE BITFOOT SPOTTED", bottom: "LAST SEEN AVOIDING KYC",
     pose: "standing", outfit: "zcash", x: .5, y: .81, scale: 78
   }
@@ -55,6 +55,12 @@ const headPalettes = [
   ["#596274", "#28344e", "#cab197", "#e8344e"], ["#545e72", "#24304a", "#c9a68d", "#e9324e"],
   ["#e94d1e", "#9d2714", "#ffad3c", "#ffbd2e"], ["#623d79", "#2d2148", "#d5a7bc", "#ef6a24"]
 ].map(([shirt, shade, skin, accent]) => ({ shirt, shade, skin, accent }));
+
+const matchedOutfits = [
+  "robe", "zcash", "suit", "suit", "sport", "sport",
+  "robe", "sport", "hoodie", "sport", "suit", "hoodie",
+  "sport", "sport", "suit", "suit", "robe", "hoodie"
+];
 
 const formatSizes = {
   square: [1800, 1800],
@@ -390,6 +396,263 @@ function drawCharacters(c) {
   }
 }
 
+// Second-generation renderer: recognisable meme layouts and the collection's
+// broad, cropped upper-body construction. The original head PNG is still drawn
+// unchanged and nearest-neighbour scaled on top of these body layers.
+function drawMemeBackdrop(c, w, h) {
+  const t = currentTemplate();
+  c.imageSmoothingEnabled = false;
+  if (!t && state.customImage) {
+    const img = state.customImage;
+    const scale = Math.max(w / img.width, h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    block(c, 0, 0, w, h, "#111318");
+    c.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+    return;
+  }
+
+  const id = t?.id || "shield";
+  const line = Math.max(12, w * .012);
+
+  if (id === "shield") {
+    block(c, 0, 0, w, h * .5, "#ebe7df");
+    block(c, 0, h * .5, w, h * .5, "#ffbd2e");
+    block(c, 0, h * .49, w, line, "#111318");
+    labelBlock(c, "PUBLIC WALLET", w * .045, h * .17, { size: w * .026, background: "#111318", color: "#fff" });
+    labelBlock(c, "SHIELDED WALLET", w * .045, h * .67, { size: w * .026, background: "#111318", color: "#ffbd2e" });
+    c.strokeStyle = "#e5483e"; c.lineWidth = line;
+    c.beginPath(); c.moveTo(w * .12, h * .31); c.lineTo(w * .22, h * .41); c.moveTo(w * .22, h * .31); c.lineTo(w * .12, h * .41); c.stroke();
+    c.strokeStyle = "#148059";
+    c.beginPath(); c.moveTo(w * .11, h * .84); c.lineTo(w * .16, h * .89); c.lineTo(w * .25, h * .77); c.stroke();
+  }
+
+  if (id === "lantern") {
+    const colors = ["#23252b", "#393632", "#725124", "#ffbd2e"];
+    for (let i = 0; i < 4; i++) {
+      const x = (i % 2) * w * .5;
+      const y = Math.floor(i / 2) * h * .5;
+      block(c, x, y, w * .5, h * .5, colors[i]);
+      c.strokeStyle = "#111318"; c.lineWidth = line; c.strokeRect(x, y, w * .5, h * .5);
+    }
+    labelBlock(c, "2:13 AM", w * .035, h * .15, { size: w * .022, background: "#fff", color: "#111318" });
+    labelBlock(c, "ONE MORE CHECK", w * .535, h * .65, { size: w * .019, background: "#e5483e", color: "#fff" });
+    c.fillStyle = "rgba(255,245,187,.58)";
+    c.beginPath(); c.moveTo(w, h * .52); c.lineTo(w * .52, h); c.lineTo(w, h); c.closePath(); c.fill();
+  }
+
+  if (id === "trail") {
+    block(c, 0, 0, w, h, "#f0e8d8");
+    block(c, 0, 0, w, h * .18, "#67c7e8");
+    labelBlock(c, "TWO BUTTONS. ONE FOOTPRINT.", w * .045, h * .075, { size: w * .021, background: "#111318", color: "#ffbd2e" });
+    block(c, w * .08, h * .68, w * .37, h * .18, "#d9473f");
+    block(c, w * .55, h * .68, w * .37, h * .18, "#20836f");
+    block(c, w * .11, h * .64, w * .31, h * .07, "#ef5d53");
+    block(c, w * .58, h * .64, w * .31, h * .07, "#38a98f");
+    c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.font = `900 ${w * .031}px Impact, sans-serif`;
+    c.fillText("PUBLIC TRAIL", w * .265, h * .77);
+    c.fillText("NO TRACE", w * .735, h * .77);
+    drawFootprint(c, w * .5, h * .91, w * .027, "#111318", .7, 0);
+  }
+
+  if (id === "inside") {
+    block(c, 0, 0, w, h, "#d2a46d");
+    block(c, 0, h * .62, w, h * .38, "#8b593e");
+    for (let i = 0; i < 6; i++) {
+      const x = w * (.03 + i * .18);
+      block(c, x, h * .28 + (i % 2) * h * .09, w * .09, h * .32, "#e84b36");
+      block(c, x + w * .025, h * .19 + (i % 2) * h * .1, w * .055, h * .23, "#ffbd2e");
+      block(c, x + w * .04, h * .3, w * .026, h * .18, "#fff0ae");
+    }
+    c.fillStyle = "#fff"; c.strokeStyle = "#111318"; c.lineWidth = line * .7;
+    c.beginPath(); c.roundRect(w * .57, h * .18, w * .34, h * .14, 24); c.fill(); c.stroke();
+    c.fillStyle = "#111318"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `900 ${w * .032}px Impact, sans-serif`; c.fillText("THIS IS FINE", w * .74, h * .25);
+  }
+
+  if (id === "watcher") {
+    block(c, 0, 0, w, h, "#111318");
+    block(c, line, line, w - line * 2, h * .485 - line, "#d9d0c0");
+    block(c, line, h * .515, w - line * 2, h * .485 - line, "#d6b1d7");
+    labelBlock(c, "ME: PRIVACY IS NORMAL", w * .035, h * .16, { size: w * .02, background: "#fff", color: "#111318" });
+    labelBlock(c, "ALSO ME WHEN SOMEONE LOOKS", w * .035, h * .66, { size: w * .0175, background: "#111318", color: "#ffbd2e" });
+    const u = w * .012;
+    for (let i = 0; i < 5; i++) drawEye(c, w * (.62 + (i % 3) * .1), h * (.6 + Math.floor(i / 3) * .12), u, "#ffbd2e");
+  }
+
+  if (id === "vouch") {
+    block(c, 0, 0, w * .5, h, "#f0a924");
+    block(c, w * .5, 0, w * .5, h, "#54c5e4");
+    block(c, 0, h * .73, w, h * .27, "#e9e2d5");
+    block(c, w * .49, 0, w * .02, h * .73, "#111318");
+    labelBlock(c, "ME", w * .06, h * .15, { size: w * .032 });
+    labelBlock(c, "ONCHAIN HOMIE", w * .57, h * .15, { size: w * .022, background: "#111318", color: "#ffbd2e" });
+    labelBlock(c, "THE VOUCH", w * .38, h * .79, { size: w * .028, background: "#ffbd2e", color: "#111318" });
+  }
+
+  if (id === "ordinal") {
+    block(c, 0, 0, w, h, "#111318");
+    block(c, line, line, w * .5 - line * 1.5, h - line * 2, "#e9e2d5");
+    block(c, w * .5 + line * .5, line, w * .5 - line * 1.5, h - line * 2, "#6b3c8c");
+    labelBlock(c, "MINT DAY", w * .055, h * .13, { size: w * .027, background: "#111318", color: "#ffbd2e" });
+    labelBlock(c, "2.5 YEARS LATER", w * .55, h * .13, { size: w * .019, background: "#ffbd2e", color: "#111318" });
+    block(c, w * .09, h * .72, w * .32, h * .11, "#fff");
+    block(c, w * .59, h * .72, w * .32, h * .11, "#fff");
+    c.fillStyle = "#111318"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `900 ${w * .023}px ui-monospace, monospace`;
+    c.fillText("I'M HERE FOR THE ART", w * .25, h * .775);
+    c.fillText("STILL HERE FOR THE ART", w * .75, h * .775);
+  }
+
+  if (id === "sighting") {
+    block(c, 0, 0, w, h, "#101714");
+    block(c, w * .04, h * .07, w * .92, h * .78, "#92ad91");
+    block(c, w * .055, h * .085, w * .89, h * .75, "#4c6253");
+    for (let y = h * .1; y < h * .83; y += h * .035) block(c, w * .055, y, w * .89, h * .006, "rgba(220,245,216,.1)");
+    block(c, 0, h * .86, w, h * .14, "#e8e4db");
+    block(c, w * .04, h * .89, w * .17, h * .065, "#d83e38");
+    c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `900 ${w * .026}px ui-monospace, monospace`; c.fillText("LIVE", w * .125, h * .922);
+    c.fillStyle = "#111318"; c.textAlign = "left"; c.font = `900 ${w * .024}px ui-monospace, monospace`; c.fillText("BITFOOT SIGHTING #303", w * .24, h * .922);
+    c.fillStyle = "#e8423c"; c.beginPath(); c.arc(w * .09, h * .12, w * .014, 0, Math.PI * 2); c.fill();
+    c.fillStyle = "#edf2e9"; c.font = `800 ${w * .018}px ui-monospace, monospace`; c.fillText("REC  03:03:03", w * .12, h * .12);
+  }
+}
+
+function drawCollectionBody(c, palette, outfit, pose) {
+  const { shirt, shade, skin, accent } = palette;
+
+  if (outfit === "hoodie") {
+    block(c, -170, -700, 340, 438, shade);
+    block(c, -140, -668, 280, 405, shirt);
+  }
+
+  block(c, -56, -322, 112, 68, skin);
+  block(c, -192, -282, 384, 72, shirt);
+  block(c, -153, -224, 306, 290, shirt);
+  block(c, -153, -224, 48, 290, shade);
+  block(c, 105, -224, 48, 290, accent);
+
+  if (outfit === "zcash") {
+    block(c, -21, -172, 42, 150, accent);
+    block(c, -61, -120, 122, 28, accent);
+    block(c, -58, -43, 116, 24, accent);
+  } else if (outfit === "suit") {
+    block(c, -17, -224, 34, 290, "#f3efe4");
+    block(c, -12, -204, 24, 244, accent);
+    block(c, -104, -224, 87, 90, "#20385d");
+    block(c, 17, -224, 87, 90, "#20385d");
+  } else if (outfit === "robe") {
+    for (let i = 0; i < 7; i++) block(c, -105 + i * 28, -224 + i * 35, 28, 61, accent);
+  } else if (outfit === "sport") {
+    block(c, -153, -181, 306, 30, "#f4f0e6");
+    block(c, -16, -224, 32, 290, accent);
+  }
+
+  if (pose === "pointing" || pose === "vouch") {
+    block(c, -230, -220, 78, 284, shade);
+    block(c, 152, -215, 170, 75, shirt);
+    block(c, 300, -215, 77, 75, skin);
+    block(c, 358, -238, 112, 32, skin);
+    if (pose === "vouch") {
+      block(c, 355, -264, 88, 102, "#ffbd2e");
+      block(c, 371, -245, 57, 13, "#111318");
+      block(c, 371, -214, 42, 12, "#111318");
+    }
+  } else if (pose === "drink") {
+    block(c, -230, -220, 78, 284, shade);
+    block(c, 152, -215, 78, 245, shirt);
+    block(c, 197, -6, 74, 70, skin);
+    block(c, 225, -138, 78, 150, "#25a7e4");
+    block(c, 239, -181, 50, 50, "#25a7e4");
+    block(c, 225, -74, 78, 22, "#ffbd2e");
+  } else if (pose === "hands") {
+    block(c, -230, -220, 78, 284, shade);
+    block(c, 152, -220, 78, 284, shirt);
+    block(c, -178, -54, 151, 68, shade);
+    block(c, 27, -54, 151, 68, shirt);
+    block(c, -61, -54, 74, 68, skin);
+    block(c, -13, -54, 74, 68, skin);
+  } else {
+    block(c, -230, -220, 78, 302, shade);
+    block(c, 152, -220, 78, 302, shirt);
+  }
+}
+
+function drawCollectionHead(c, image) {
+  if (!image?.complete || !image.naturalWidth) return;
+  const height = 445;
+  const width = height * (image.naturalWidth / image.naturalHeight);
+  c.imageSmoothingEnabled = false;
+  c.drawImage(image, -width / 2, -704, width, height);
+}
+
+function drawCollectionCharacter(c, options) {
+  const { x, y, scale, head, outfit, pose, flip = false, alpha = 1 } = options;
+  const effectiveOutfit = outfit === "auto" ? matchedOutfits[head] : outfit;
+  const artScale = (canvas.width / 1200) * (scale / 100);
+  c.save();
+  c.globalAlpha = alpha;
+  c.translate(x, y);
+  c.scale((flip ? -1 : 1) * artScale, artScale);
+  drawCollectionBody(c, resolvePalette(head, effectiveOutfit), effectiveOutfit, pose);
+  drawCollectionHead(c, heads[head]);
+  c.restore();
+}
+
+function drawMemeCharacters(c) {
+  const t = currentTemplate();
+  if (!t) {
+    drawCollectionCharacter(c, characterPlacement());
+    return;
+  }
+  const w = canvas.width;
+  const h = canvas.height;
+  const dx = (state.x - t.x) * w;
+  const dy = (state.y - t.y) * h;
+  const common = { head: state.head, outfit: state.outfit, alpha: 1 };
+
+  if (t.id === "shield") {
+    drawCollectionCharacter(c, { ...common, x: w * .72 + dx, y: h * .5 + dy, scale: 60, pose: "hands", flip: false });
+    drawCollectionCharacter(c, { ...common, x: w * .72 + dx, y: h + dy, scale: 60, pose: "pointing", flip: false });
+  } else if (t.id === "lantern") {
+    const spots = [[.28,.49],[.77,.49],[.28,.98],[.77,.98]];
+    spots.forEach((spot, i) => drawCollectionCharacter(c, { ...common, x: w * spot[0] + dx * .3, y: h * spot[1] + dy * .3, scale: 34 + i * 2, pose: i === 3 ? "pointing" : "standing", flip: i % 2 === 1, alpha: .78 + i * .07 }));
+  } else if (t.id === "trail") {
+    drawCollectionCharacter(c, { ...common, x: w * .5 + dx, y: h * .65 + dy, scale: 62, pose: "hands", flip: state.flip });
+  } else if (t.id === "inside") {
+    drawCollectionCharacter(c, { ...common, x: w * .43 + dx, y: h * .82 + dy, scale: 62, pose: "drink", flip: false });
+  } else if (t.id === "watcher") {
+    drawCollectionCharacter(c, { ...common, x: w * .72 + dx, y: h * .5 + dy, scale: 56, pose: "standing", flip: false });
+    drawCollectionCharacter(c, { ...common, x: w * .72 + dx, y: h + dy, scale: 56, pose: "standing", flip: true });
+  } else if (t.id === "vouch") {
+    drawCollectionCharacter(c, { ...common, x: w * .28 + dx, y: h * .79 + dy, scale: 62, pose: "vouch", flip: false });
+    drawCollectionCharacter(c, { x: w * .72 + dx, y: h * .79 + dy, scale: 62, head: (state.head + 7) % heads.length, outfit: "suit", pose: "vouch", flip: true, alpha: 1 });
+  } else if (t.id === "ordinal") {
+    drawCollectionCharacter(c, { ...common, x: w * .25 + dx, y: h * .75 + dy, scale: 58, pose: "standing", flip: false });
+    drawCollectionCharacter(c, { ...common, x: w * .75 + dx, y: h * .75 + dy, scale: 58, pose: "drink", flip: false });
+  } else {
+    drawCollectionCharacter(c, { ...common, x: w * .5 + dx, y: h * .86 + dy, scale: state.scale, pose: state.pose, flip: state.flip });
+  }
+}
+
+function drawMemeForeground(c) {
+  const t = currentTemplate();
+  if (!t) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  if (t.id === "inside") {
+    block(c, 0, h * .71, w, h * .16, "#5a3528");
+    block(c, 0, h * .71, w, h * .025, "#2d1c18");
+    block(c, w * .66, h * .64, w * .12, h * .1, "#f0ede4");
+    block(c, w * .76, h * .66, w * .05, h * .055, "#f0ede4");
+    block(c, w * .69, h * .68, w * .055, h * .02, "#8f5433");
+  }
+  if (t.id === "vouch") {
+    block(c, w * .43, h * .59, w * .14, h * .085, "#ffbd2e");
+    c.strokeStyle = "#111318"; c.lineWidth = w * .008; c.strokeRect(w * .43, h * .59, w * .14, h * .085);
+    c.fillStyle = "#111318"; c.textAlign = "center"; c.textBaseline = "middle"; c.font = `900 ${w * .019}px ui-monospace, monospace`; c.fillText("VERIFIED", w * .5, h * .633);
+  }
+}
+
 function wrappedLines(c, text, maxWidth) {
   const words = text.trim().split(/\s+/).filter(Boolean);
   const lines = [];
@@ -486,8 +749,9 @@ function render() {
   ctx.save();
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackdrop(ctx, canvas.width, canvas.height);
-  drawCharacters(ctx);
+  drawMemeBackdrop(ctx, canvas.width, canvas.height);
+  drawMemeCharacters(ctx);
+  drawMemeForeground(ctx);
   drawCaption(ctx, state.topText, "top");
   drawCaption(ctx, state.bottomText, "bottom");
   drawTag(ctx);
