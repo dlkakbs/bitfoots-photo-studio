@@ -27,27 +27,30 @@
           <h1 id="mainTitle">Become a Bitfoot.</h1>
           <p>Place an original pixel head over your face. Your photo stays on your device.</p>
         </div>
-        <span class="resolution" id="resolution">SAMPLE PHOTO</span>
+        <span class="resolution" id="resolution">AWAITING PHOTO</span>
       </div>
 
-      <div class="stage" id="stage">
+      <div class="stage is-empty" id="stage">
         <canvas id="artboard" width="1500" height="1000" tabindex="0" aria-label="Photo composition. Drag the Bitfoot head to move it; use arrow keys for fine adjustments."></canvas>
-        <div class="stage-hint" id="stageHint"><span>✥</span> Drag the head into place</div>
-        <div class="stage-empty" id="stageEmpty" hidden>
+        <div class="stage-hint hidden" id="stageHint"><span>✥</span> Drag the head into place</div>
+        <div class="stage-empty" id="stageEmpty">
+          <span class="empty-kicker">YOUR CANVAS IS READY</span>
           <span class="empty-icon" aria-hidden="true">＋</span>
-          <strong>Add a photo to begin</strong>
-          <span>Portraits, desk shots, group photos — anything with room for a Bitfoot.</span>
+          <strong>Start with your photo.</strong>
+          <p>Drag an image here or choose one from your device.</p>
+          <label class="button button-primary empty-upload" for="photoInput">Choose a photo <b>↗</b></label>
+          <small>PNG, JPG, WEBP · stays on your device</small>
         </div>
       </div>
 
       <div class="stage-actions">
         <label class="button button-primary upload-button" for="photoInput"><span>Use my photo</span><b>＋</b></label>
         <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" />
-        <button class="button button-dark" id="downloadBtn" type="button"><span>Download PNG</span><b>↓</b></button>
-        <button class="button button-light" id="copyBtn" type="button">Copy</button>
-        <button class="button button-icon" id="resetBtn" type="button" aria-label="Reset head position">⌖</button>
+        <button class="button button-dark" id="downloadBtn" type="button" disabled><span>Download PNG</span><b>↓</b></button>
+        <button class="button button-light" id="copyBtn" type="button" disabled>Copy</button>
+        <button class="button button-icon" id="resetBtn" type="button" aria-label="Reset head position" disabled>⌖</button>
       </div>
-      <p class="status" id="status" role="status">Move the head by dragging it. Use the sliders for precise sizing and rotation.</p>
+      <p class="status" id="status" role="status">Choose a photo to begin.</p>
     </section>
 
     <aside class="control-panel" aria-labelledby="controlsTitle">

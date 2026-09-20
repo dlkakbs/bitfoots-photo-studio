@@ -13,6 +13,9 @@ const rotationOutput = document.querySelector("#rotationOutput");
 const grayscaleToggle = document.querySelector("#grayscaleToggle");
 const flipToggle = document.querySelector("#flipToggle");
 const photoInput = document.querySelector("#photoInput");
+const downloadBtn = document.querySelector("#downloadBtn");
+const copyBtn = document.querySelector("#copyBtn");
+const resetBtn = document.querySelector("#resetBtn");
 
 // Opaque-pixel bounds for the original PNGs. Cropping only transparent margins
 // makes the same size setting visually consistent without changing head pixels.
@@ -37,11 +40,9 @@ const heads = Array.from({ length: 18 }, (_, index) => {
 
 const state = {
   photo: null,
-  photoName: "sample",
-  isSample: true,
   head: 0,
-  x: .48,
-  y: .36,
+  x: .5,
+  y: .35,
   size: 35,
   rotation: 0,
   grayscale: true,
@@ -58,7 +59,7 @@ function setImageSize(image) {
   const ratio = Math.min(1, 3600 / Math.max(width, height), Math.sqrt(12000000 / (width * height)));
   canvas.width = Math.max(1, Math.round(width * ratio));
   canvas.height = Math.max(1, Math.round(height * ratio));
-  resolutionEl.textContent = `${canvas.width} × ${canvas.height}${state.isSample ? " · SAMPLE" : ""}`;
+  resolutionEl.textContent = `${canvas.width} × ${canvas.height}`;
 }
 
 function drawPhoto() {
@@ -133,7 +134,9 @@ function createHeadButtons() {
       state.head = index;
       syncHeadSelection();
       queueRender();
-      say(`Bitfoot ${String(index + 1).padStart(2, "0")} selected. Drag it over your face.`);
+      say(state.photo
+        ? `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Drag it over your face.`
+        : `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Choose a photo to begin.`);
     });
     headGrid.append(button);
   });
@@ -141,8 +144,8 @@ function createHeadButtons() {
 }
 
 function resetHead() {
-  state.x = state.isSample ? .48 : .5;
-  state.y = state.isSample ? .36 : .35;
+  state.x = .5;
+  state.y = .35;
   state.size = 35;
   state.rotation = 0;
   state.flip = false;
@@ -156,14 +159,16 @@ function resetHead() {
   say("Head position and size reset.");
 }
 
-function usePhoto(image, name, isSample) {
+function usePhoto(image) {
   state.photo = image;
-  state.photoName = name;
-  state.isSample = isSample;
   setImageSize(image);
   emptyEl.hidden = true;
+  stage.classList.remove("is-empty");
+  downloadBtn.disabled = false;
+  copyBtn.disabled = false;
+  resetBtn.disabled = false;
   resetHead();
-  say(isSample ? "Try this sample, or use your own photo." : "Photo ready. Drag the Bitfoot over your face, then download.");
+  say("Photo ready. Drag the Bitfoot over your face, then download.");
 }
 
 async function loadUserPhoto(file) {
@@ -177,7 +182,7 @@ async function loadUserPhoto(file) {
   try {
     image.src = url;
     await image.decode();
-    usePhoto(image, file.name, false);
+    usePhoto(image);
   } catch {
     say("This image could not be opened. Try another PNG, JPG or WebP photo.");
   } finally {
@@ -221,6 +226,7 @@ canvas.addEventListener("pointerup", endDrag);
 canvas.addEventListener("pointercancel", endDrag);
 
 canvas.addEventListener("keydown", event => {
+  if (!state.photo) return;
   const step = event.shiftKey ? .02 : .005;
   if (event.key === "ArrowLeft") state.x -= step;
   else if (event.key === "ArrowRight") state.x += step;
@@ -244,7 +250,7 @@ rotationSlider.addEventListener("input", () => {
 grayscaleToggle.addEventListener("change", () => { state.grayscale = grayscaleToggle.checked; queueRender(); });
 flipToggle.addEventListener("change", () => { state.flip = flipToggle.checked; queueRender(); });
 photoInput.addEventListener("change", event => loadUserPhoto(event.target.files?.[0]));
-document.querySelector("#resetBtn").addEventListener("click", resetHead);
+resetBtn.addEventListener("click", resetHead);
 
 stage.addEventListener("dragover", event => { event.preventDefault(); stage.classList.add("drag-over"); });
 stage.addEventListener("dragleave", () => stage.classList.remove("drag-over"));
@@ -254,7 +260,7 @@ stage.addEventListener("drop", event => {
   loadUserPhoto(event.dataTransfer?.files?.[0]);
 });
 
-document.querySelector("#downloadBtn").addEventListener("click", async () => {
+downloadBtn.addEventListener("click", async () => {
   if (!state.photo) return;
   render();
   const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
@@ -268,7 +274,7 @@ document.querySelector("#downloadBtn").addEventListener("click", async () => {
   say("PNG downloaded at photo resolution.");
 });
 
-document.querySelector("#copyBtn").addEventListener("click", async () => {
+copyBtn.addEventListener("click", async () => {
   if (!state.photo) return;
   try {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
@@ -279,21 +285,12 @@ document.querySelector("#copyBtn").addEventListener("click", async () => {
   }
 });
 
-async function init() {
+function init() {
   createHeadButtons();
   const requestedHead = Number(new URLSearchParams(location.search).get("head"));
   if (Number.isInteger(requestedHead) && requestedHead >= 1 && requestedHead <= heads.length) {
     state.head = requestedHead - 1;
     syncHeadSelection();
-  }
-  const sample = new Image();
-  try {
-    sample.src = "./assets/sample-desk-photo.png";
-    await sample.decode();
-    usePhoto(sample, "sample", true);
-  } catch {
-    emptyEl.hidden = false;
-    say("Add a photo to begin.");
   }
 }
 
