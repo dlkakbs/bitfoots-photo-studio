@@ -31,8 +31,14 @@
       </div>
 
       <div class="stage is-empty" id="stage">
-        <canvas id="artboard" width="1500" height="1000" tabindex="0" aria-label="Photo composition. Drag the Bitfoot head to move it; use arrow keys for fine adjustments."></canvas>
-        <div class="stage-hint hidden" id="stageHint"><span>✥</span> Drag the head into place</div>
+        <canvas id="artboard" width="1500" height="1000" tabindex="0" aria-label="Photo composition. Drag the Bitfoot head to move it, pinch to resize, twist to rotate, or use arrow keys for fine adjustments."></canvas>
+        <div class="transform-frame" id="transformFrame" hidden aria-label="Avatar transform controls">
+          <button class="transform-handle rotate-handle" id="rotateHandle" type="button" aria-label="Drag to rotate avatar" title="Rotate">⟳</button>
+          <button class="transform-handle scale-handle" id="scaleHandle" type="button" aria-label="Drag to resize avatar" title="Resize">⤢</button>
+        </div>
+        <div class="source-marker" id="sourceMarker" hidden aria-hidden="true">＋</div>
+        <div class="brush-cursor" id="brushCursor" hidden aria-hidden="true"></div>
+        <div class="stage-hint hidden" id="stageHint"><span>✥</span> Drag · pinch to resize · twist to rotate</div>
         <div class="stage-empty" id="stageEmpty">
           <span class="empty-kicker">YOUR CANVAS IS READY</span>
           <span class="empty-icon" aria-hidden="true">＋</span>
@@ -50,6 +56,20 @@
         <button class="button button-light" id="copyBtn" type="button" disabled>Copy</button>
         <button class="button button-icon" id="resetBtn" type="button" aria-label="Reset head position" disabled>⌖</button>
       </div>
+      <div class="cleanup-toolbar">
+        <button class="button button-light" id="repairToggle" type="button" aria-pressed="false" disabled>✦ Clean stray hair</button>
+        <span>Touch up hair outside the pixel head.</span>
+      </div>
+      <div class="repair-options" id="repairOptions" hidden>
+        <p><strong>Background repair</strong> copies a nearby clean area over stray hair. Best for small edges and simple backgrounds.</p>
+        <label class="slider-label" for="brushSlider"><span>Brush width</span><output id="brushOutput">26 px</output></label>
+        <input id="brushSlider" type="range" min="10" max="80" value="26" />
+        <div class="repair-actions">
+          <button class="button button-light" id="sourceButton" type="button">Pick clean area</button>
+          <button class="button button-light" id="undoButton" type="button" disabled>Undo stroke</button>
+        </div>
+        <small>Tap clean background, then brush over visible hair. Tap “Pick clean area” to sample another spot.</small>
+      </div>
       <p class="status" id="status" role="status">Choose a photo to begin.</p>
     </section>
 
@@ -63,10 +83,11 @@
 
       <div class="control-section">
         <div class="section-title"><span class="eyebrow">02 / ADJUST</span><h3>Fit the photo</h3></div>
+        <p class="gesture-note">Drag the head. Pinch to resize, twist to rotate, or use the yellow corner handles.</p>
         <label class="slider-label" for="sizeSlider"><span>Head size</span><output id="sizeOutput">35%</output></label>
         <input id="sizeSlider" type="range" min="12" max="85" value="35" />
         <label class="slider-label" for="rotationSlider"><span>Rotation</span><output id="rotationOutput">0°</output></label>
-        <input id="rotationSlider" type="range" min="-35" max="35" value="0" />
+        <input id="rotationSlider" type="range" min="-180" max="180" value="0" />
         <div class="toggle-row">
           <label><input id="grayscaleToggle" type="checkbox" checked /><span class="toggle"></span><span>Black & white photo</span></label>
           <label><input id="flipToggle" type="checkbox" /><span class="toggle"></span><span>Flip head</span></label>

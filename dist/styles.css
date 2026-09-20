@@ -67,6 +67,15 @@ h1 { margin: 8px 0 5px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; }
 .stage.drag-over { outline: 5px solid #ffbd2e; outline-offset: -5px; }
 #artboard { width: 100%; height: auto; display: block; image-rendering: auto; cursor: grab; touch-action: none; }
 #artboard.dragging { cursor: grabbing; }
+.stage.repairing #artboard { cursor: crosshair; }
+.transform-frame { position: absolute; z-index: 2; border: 2px dashed rgba(255,255,255,.92); outline: 1px solid rgba(23,26,32,.55); pointer-events: none; transform-origin: center; }
+.transform-frame[hidden], .source-marker[hidden], .brush-cursor[hidden] { display: none; }
+.transform-handle { position: absolute; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 2px solid #171a20; border-radius: 50%; background: #ffbd2e; color: #171a20; box-shadow: 2px 2px 0 rgba(23,26,32,.5); font-size: 24px; font-weight: 800; line-height: 1; pointer-events: auto; touch-action: none; cursor: grab; }
+.transform-handle:active { cursor: grabbing; }
+.rotate-handle { top: -23px; right: -23px; }
+.scale-handle { right: -23px; bottom: -23px; }
+.source-marker { position: absolute; z-index: 3; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #171a20; border-radius: 50%; background: #ffbd2e; color: #171a20; font-size: 20px; line-height: 1; pointer-events: none; transform: translate(-50%,-50%); }
+.brush-cursor { position: absolute; z-index: 3; border: 2px solid #ffbd2e; border-radius: 50%; box-shadow: 0 0 0 1px #171a20; pointer-events: none; transform: translate(-50%,-50%); }
 .stage-hint { position: absolute; left: 14px; bottom: 14px; background: rgba(23,26,32,.86); color: #fff; padding: 8px 11px; font-size: 12px; font-weight: 750; pointer-events: none; transition: opacity .2s; }
 .stage-hint span { color: #ffbd2e; font-size: 16px; margin-right: 6px; }
 .stage-hint.hidden { opacity: 0; }
@@ -108,6 +117,17 @@ h1 { margin: 8px 0 5px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; }
 .button-light { background: #f6f5f1; }
 .button-icon { width: 48px; padding: 0; justify-content: center; font-size: 23px; }
 #photoInput { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.cleanup-toolbar { display: flex; align-items: center; gap: 13px; flex-wrap: wrap; margin-top: 14px; }
+.cleanup-toolbar .button { min-height: 42px; gap: 8px; }
+.cleanup-toolbar > span { color: #62656c; font-size: 13px; }
+.repair-options { margin-top: 12px; padding: 16px; border: 1px solid #d8d3c7; border-left: 4px solid #ffbd2e; background: #faf8f2; }
+.repair-options[hidden] { display: none; }
+.repair-options p { margin-bottom: 12px; color: #555962; font-size: 13px; line-height: 1.45; }
+.repair-options p strong { color: #171a20; }
+.repair-options .slider-label { margin: 8px 0 9px; }
+.repair-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0 10px; }
+.repair-actions .button { min-height: 40px; font-size: 13px; }
+.repair-options small { color: #62656c; font-size: 12px; line-height: 1.45; }
 .status { min-height: 20px; margin: 15px 0 0; font-size: 13px; color: #60636a; }
 
 .control-title { padding-bottom: 20px; border-bottom: 1px solid #dedbd4; }
@@ -123,6 +143,7 @@ h1 { margin: 8px 0 5px; font-size: clamp(28px, 3vw, 42px); line-height: 1.08; }
 .control-section { border-top: 1px solid #dedbd4; padding-top: 20px; }
 .section-title { display: flex; align-items: baseline; gap: 13px; margin-bottom: 16px; }
 .section-title h3 { margin: 0; font-family: Georgia, serif; font-size: 21px; }
+.gesture-note { margin-bottom: 14px; color: #62656c; font-size: 13px; line-height: 1.45; }
 .slider-label { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 9px; font-size: 14px; font-weight: 740; }
 .slider-label output { font: 850 13px/1 ui-monospace, monospace; color: #ad6100; }
 input[type="range"] { display: block; width: 100%; accent-color: #e5901a; }
@@ -170,6 +191,11 @@ input[type="range"] { display: block; width: 100%; accent-color: #e5901a; }
   .stage-empty { gap: 9px; padding: 25px; }
   .stage-empty::before { inset: 10px; }
   .empty-icon { width: 58px; height: 58px; font-size: 35px; }
+  .cleanup-toolbar { align-items: stretch; gap: 7px; }
+  .cleanup-toolbar .button { width: 100%; justify-content: center; }
+  .cleanup-toolbar > span { font-size: 12px; }
+  .repair-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .repair-actions .button { min-width: 0; padding-inline: 8px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; }

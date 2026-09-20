@@ -16,6 +16,24 @@ const photoInput = document.querySelector("#photoInput");
 const downloadBtn = document.querySelector("#downloadBtn");
 const copyBtn = document.querySelector("#copyBtn");
 const resetBtn = document.querySelector("#resetBtn");
+const transformFrame = document.querySelector("#transformFrame");
+const rotateHandle = document.querySelector("#rotateHandle");
+const scaleHandle = document.querySelector("#scaleHandle");
+const sourceMarker = document.querySelector("#sourceMarker");
+const brushCursor = document.querySelector("#brushCursor");
+const repairToggle = document.querySelector("#repairToggle");
+const repairOptions = document.querySelector("#repairOptions");
+const sourceButton = document.querySelector("#sourceButton");
+const undoButton = document.querySelector("#undoButton");
+const brushSlider = document.querySelector("#brushSlider");
+const brushOutput = document.querySelector("#brushOutput");
+
+const repairCanvas = document.createElement("canvas");
+const repairCtx = repairCanvas.getContext("2d");
+const strokeSource = document.createElement("canvas");
+const strokeSourceCtx = strokeSource.getContext("2d");
+const stampCanvas = document.createElement("canvas");
+const stampCtx = stampCanvas.getContext("2d");
 
 // Opaque-pixel bounds for the original PNGs. Cropping only transparent margins
 // makes the same size setting visually consistent without changing head pixels.
@@ -39,14 +57,17 @@ const heads = Array.from({ length: 18 }, (_, index) => {
 });
 
 const state = {
-  photo: null,
+  photoReady: false,
   head: 0,
   x: .5,
   y: .35,
   size: 35,
   rotation: 0,
   grayscale: true,
-  flip: false
+  flip: false,
+  repairMode: false,
+  pickSource: false,
+  sourcePoint: null
 };
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -59,25 +80,32 @@ function setImageSize(image) {
   const ratio = Math.min(1, 3600 / Math.max(width, height), Math.sqrt(12000000 / (width * height)));
   canvas.width = Math.max(1, Math.round(width * ratio));
   canvas.height = Math.max(1, Math.round(height * ratio));
+  repairCanvas.width = canvas.width;
+  repairCanvas.height = canvas.height;
+  repairCtx.drawImage(image, 0, 0, canvas.width, canvas.height);
   resolutionEl.textContent = `${canvas.width} × ${canvas.height}`;
 }
 
 function drawPhoto() {
   ctx.save();
   ctx.filter = state.grayscale ? "grayscale(1) contrast(1.04)" : "none";
-  ctx.drawImage(state.photo, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(repairCanvas, 0, 0);
   ctx.restore();
+}
+
+function headDimensions() {
+  const [sx, sy, sw, sh] = HEAD_BOUNDS[state.head];
+  const desiredWidth = canvas.width * state.size / 100 * HEAD_OPTICAL_SCALE[state.head];
+  const maxHeight = canvas.height * (state.head === 2 ? 1 : .85);
+  const width = Math.min(desiredWidth, maxHeight * sw / sh);
+  const height = width * sh / sw;
+  return { sx, sy, sw, sh, width, height };
 }
 
 function drawHead() {
   const image = heads[state.head];
   if (!image.complete || !image.naturalWidth) return;
-  const [sx, sy, sw, sh] = HEAD_BOUNDS[state.head];
-  // Width is measured from visible pixels, not from the PNG's transparent box.
-  const desiredWidth = canvas.width * state.size / 100 * HEAD_OPTICAL_SCALE[state.head];
-  const maxHeight = canvas.height * (state.head === 2 ? 1 : .85);
-  const width = Math.min(desiredWidth, maxHeight * sw / sh);
-  const height = width * sh / sw;
+  const { sx, sy, sw, sh, width, height } = headDimensions();
 
   ctx.save();
   ctx.translate(state.x * canvas.width, state.y * canvas.height);
@@ -88,6 +116,36 @@ function drawHead() {
   ctx.restore();
 }
 
+function stagePoint(x, y) {
+  const canvasRect = canvas.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  return {
+    x: canvasRect.left - stageRect.left + x * canvasRect.width,
+    y: canvasRect.top - stageRect.top + y * canvasRect.height
+  };
+}
+
+function syncOverlays() {
+  const image = heads[state.head];
+  transformFrame.hidden = !state.photoReady || state.repairMode || !image.complete || !image.naturalWidth;
+  if (!transformFrame.hidden) {
+    const { width, height } = headDimensions();
+    const rect = canvas.getBoundingClientRect();
+    const center = stagePoint(state.x, state.y);
+    transformFrame.style.left = `${center.x}px`;
+    transformFrame.style.top = `${center.y}px`;
+    transformFrame.style.width = `${width / canvas.width * rect.width}px`;
+    transformFrame.style.height = `${height / canvas.height * rect.height}px`;
+    transformFrame.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg)`;
+  }
+  sourceMarker.hidden = !state.repairMode || !state.sourcePoint || state.pickSource;
+  if (!sourceMarker.hidden) {
+    const point = stagePoint(state.sourcePoint.x, state.sourcePoint.y);
+    sourceMarker.style.left = `${point.x}px`;
+    sourceMarker.style.top = `${point.y}px`;
+  }
+}
+
 let renderQueued = false;
 function queueRender() {
   if (renderQueued) return;
@@ -96,10 +154,11 @@ function queueRender() {
 }
 
 function render() {
-  if (!state.photo) return;
+  if (!state.photoReady) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPhoto();
-  drawHead();
+  if (!state.repairMode) drawHead();
+  syncOverlays();
 }
 
 function syncHeadSelection() {
@@ -134,7 +193,7 @@ function createHeadButtons() {
       state.head = index;
       syncHeadSelection();
       queueRender();
-      say(state.photo
+      say(state.photoReady
         ? `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Drag it over your face.`
         : `Bitfoot ${String(index + 1).padStart(2, "0")} selected. Choose a photo to begin.`);
     });
@@ -149,26 +208,40 @@ function resetHead() {
   state.size = 35;
   state.rotation = 0;
   state.flip = false;
-  sizeSlider.value = String(state.size);
-  sizeOutput.value = `${state.size}%`;
-  rotationSlider.value = "0";
-  rotationOutput.value = "0°";
+  syncTransformControls();
   flipToggle.checked = false;
   hintEl.classList.remove("hidden");
   queueRender();
   say("Head position and size reset.");
 }
 
+function syncTransformControls() {
+  sizeSlider.value = String(Math.round(state.size));
+  sizeOutput.value = `${Math.round(state.size)}%`;
+  rotationSlider.value = String(Math.round(state.rotation));
+  rotationOutput.value = `${Math.round(state.rotation)}°`;
+}
+
 function usePhoto(image) {
-  state.photo = image;
   setImageSize(image);
+  state.photoReady = true;
+  state.repairMode = false;
+  state.pickSource = false;
+  state.sourcePoint = null;
+  repairOptions.hidden = true;
+  repairToggle.setAttribute("aria-pressed", "false");
+  repairToggle.textContent = "✦ Clean stray hair";
+  stage.classList.remove("repairing");
+  brushCursor.hidden = true;
+  undoButton.disabled = true;
   emptyEl.hidden = true;
   stage.classList.remove("is-empty");
   downloadBtn.disabled = false;
   copyBtn.disabled = false;
   resetBtn.disabled = false;
+  repairToggle.disabled = false;
   resetHead();
-  say("Photo ready. Drag the Bitfoot over your face, then download.");
+  say("Photo ready. Drag the head, pinch to resize, or twist to rotate.");
 }
 
 async function loadUserPhoto(file) {
@@ -187,6 +260,7 @@ async function loadUserPhoto(file) {
     say("This image could not be opened. Try another PNG, JPG or WebP photo.");
   } finally {
     URL.revokeObjectURL(url);
+    photoInput.value = "";
   }
 }
 
@@ -198,35 +272,254 @@ function pointerPoint(event) {
   };
 }
 
-let dragging = false;
-canvas.addEventListener("pointerdown", event => {
-  if (!state.photo) return;
-  dragging = true;
+const activePointers = new Map();
+let dragOrigin = null;
+let pinchOrigin = null;
+let repairStroke = null;
+
+function headHitTest(point) {
+  const { width, height } = headDimensions();
+  const dx = (point.x - state.x) * canvas.width;
+  const dy = (point.y - state.y) * canvas.height;
+  const angle = state.rotation * Math.PI / 180;
+  const localX = dx * Math.cos(angle) + dy * Math.sin(angle);
+  const localY = -dx * Math.sin(angle) + dy * Math.cos(angle);
+  const padding = 18 * canvas.width / canvas.getBoundingClientRect().width;
+  return Math.abs(localX) <= width / 2 + padding && Math.abs(localY) <= height / 2 + padding;
+}
+
+function twoPointerGeometry() {
+  const [a, b] = [...activePointers.values()];
+  return {
+    midX: (a.x + b.x) / 2,
+    midY: (a.y + b.y) / 2,
+    distance: Math.hypot((b.x - a.x) * canvas.width, (b.y - a.y) * canvas.height),
+    angle: Math.atan2((b.y - a.y) * canvas.height, (b.x - a.x) * canvas.width)
+  };
+}
+
+function beginPinch() {
+  const gesture = twoPointerGeometry();
+  pinchOrigin = { ...gesture, x: state.x, y: state.y, size: state.size, rotation: state.rotation };
+  dragOrigin = null;
+}
+
+function normalizeRotation(degrees) {
+  return ((degrees + 180) % 360 + 360) % 360 - 180;
+}
+
+function updatePinch() {
+  const gesture = twoPointerGeometry();
+  state.x = clamp(pinchOrigin.x + gesture.midX - pinchOrigin.midX, -.15, 1.15);
+  state.y = clamp(pinchOrigin.y + gesture.midY - pinchOrigin.midY, -.15, 1.15);
+  state.size = clamp(pinchOrigin.size * gesture.distance / Math.max(1, pinchOrigin.distance), 12, 85);
+  const turn = Math.atan2(Math.sin(gesture.angle - pinchOrigin.angle), Math.cos(gesture.angle - pinchOrigin.angle));
+  state.rotation = normalizeRotation(pinchOrigin.rotation + turn * 180 / Math.PI);
+  syncTransformControls();
+  queueRender();
+}
+
+function brushRadius() {
+  return Number(brushSlider.value) * canvas.width / canvas.getBoundingClientRect().width / 2;
+}
+
+function updateBrushCursor(event) {
+  if (!state.repairMode) return;
+  const point = pointerPoint(event);
+  const position = stagePoint(point.x, point.y);
+  brushCursor.hidden = false;
+  brushCursor.style.left = `${position.x}px`;
+  brushCursor.style.top = `${position.y}px`;
+  brushCursor.style.width = `${brushSlider.value}px`;
+  brushCursor.style.height = `${brushSlider.value}px`;
+}
+
+function stampAt(x, y) {
+  const radius = repairStroke.radius;
+  const diameter = Math.max(2, Math.ceil(radius * 2));
+  if (stampCanvas.width !== diameter) {
+    stampCanvas.width = diameter;
+    stampCanvas.height = diameter;
+  }
+  stampCtx.clearRect(0, 0, diameter, diameter);
+  const center = diameter / 2;
+  const left = x + repairStroke.offsetX - center;
+  const top = y + repairStroke.offsetY - center;
+  const sx = Math.max(0, Math.floor(left));
+  const sy = Math.max(0, Math.floor(top));
+  const ex = Math.min(strokeSource.width, Math.ceil(left + diameter));
+  const ey = Math.min(strokeSource.height, Math.ceil(top + diameter));
+  if (ex > sx && ey > sy) {
+    stampCtx.drawImage(strokeSource, sx, sy, ex - sx, ey - sy, sx - left, sy - top, ex - sx, ey - sy);
+    const fade = stampCtx.createRadialGradient(center, center, radius * .55, center, center, radius);
+    fade.addColorStop(0, "rgba(0,0,0,1)");
+    fade.addColorStop(1, "rgba(0,0,0,0)");
+    stampCtx.globalCompositeOperation = "destination-in";
+    stampCtx.fillStyle = fade;
+    stampCtx.fillRect(0, 0, diameter, diameter);
+    stampCtx.globalCompositeOperation = "source-over";
+    repairCtx.drawImage(stampCanvas, x - center, y - center);
+  }
+}
+
+function startRepairStroke(point, pointerId) {
+  strokeSource.width = repairCanvas.width;
+  strokeSource.height = repairCanvas.height;
+  strokeSourceCtx.drawImage(repairCanvas, 0, 0);
+  const x = point.x * canvas.width;
+  const y = point.y * canvas.height;
+  repairStroke = {
+    pointerId,
+    offsetX: state.sourcePoint.x * canvas.width - x,
+    offsetY: state.sourcePoint.y * canvas.height - y,
+    lastX: x,
+    lastY: y,
+    radius: brushRadius()
+  };
+  stampAt(x, y);
+  queueRender();
+}
+
+function continueRepairStroke(point) {
+  const x = point.x * canvas.width;
+  const y = point.y * canvas.height;
+  const distance = Math.hypot(x - repairStroke.lastX, y - repairStroke.lastY);
+  const steps = Math.max(1, Math.ceil(distance / Math.max(2, repairStroke.radius * .42)));
+  const fromX = repairStroke.lastX;
+  const fromY = repairStroke.lastY;
+  for (let step = 1; step <= steps; step++) {
+    stampAt(fromX + (x - fromX) * step / steps, fromY + (y - fromY) * step / steps);
+  }
+  repairStroke.lastX = x;
+  repairStroke.lastY = y;
+  queueRender();
+}
+
+function repairPointerDown(event) {
+  if (repairStroke) return;
+  const point = pointerPoint(event);
+  updateBrushCursor(event);
+  if (state.pickSource || !state.sourcePoint) {
+    state.sourcePoint = { x: clamp(point.x, 0, 1), y: clamp(point.y, 0, 1) };
+    state.pickSource = false;
+    syncOverlays();
+    say("Clean area selected. Brush over the hair you want to hide.");
+    return;
+  }
   canvas.setPointerCapture(event.pointerId);
+  startRepairStroke(point, event.pointerId);
+}
+
+canvas.addEventListener("pointerdown", event => {
+  if (!state.photoReady) return;
+  event.preventDefault();
+  if (state.repairMode) { repairPointerDown(event); return; }
+  canvas.setPointerCapture(event.pointerId);
+  activePointers.set(event.pointerId, pointerPoint(event));
   canvas.classList.add("dragging");
   hintEl.classList.add("hidden");
-  const point = pointerPoint(event);
-  state.x = point.x;
-  state.y = point.y;
-  queueRender();
+  if (activePointers.size === 1) {
+    dragOrigin = { point: pointerPoint(event), x: state.x, y: state.y, moved: false, suppressTap: false };
+  } else if (activePointers.size >= 2) beginPinch();
 });
+
 canvas.addEventListener("pointermove", event => {
-  if (!dragging) return;
+  if (state.repairMode) {
+    updateBrushCursor(event);
+    if (repairStroke?.pointerId === event.pointerId) continueRepairStroke(pointerPoint(event));
+    return;
+  }
+  if (!activePointers.has(event.pointerId)) return;
   const point = pointerPoint(event);
-  state.x = point.x;
-  state.y = point.y;
+  activePointers.set(event.pointerId, point);
+  if (activePointers.size >= 2) { updatePinch(); return; }
+  if (!dragOrigin) return;
+  const rect = canvas.getBoundingClientRect();
+  if (Math.hypot((point.x - dragOrigin.point.x) * rect.width, (point.y - dragOrigin.point.y) * rect.height) < 3 && !dragOrigin.moved) return;
+  dragOrigin.moved = true;
+  state.x = clamp(dragOrigin.x + point.x - dragOrigin.point.x, -.15, 1.15);
+  state.y = clamp(dragOrigin.y + point.y - dragOrigin.point.y, -.15, 1.15);
   queueRender();
 });
-function endDrag(event) {
-  dragging = false;
-  canvas.classList.remove("dragging");
-  if (event && canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+
+function endPointer(event, cancelled = false) {
+  if (state.repairMode) {
+    if (repairStroke?.pointerId === event.pointerId) {
+      repairStroke = null;
+      undoButton.disabled = false;
+      say("Edge cleaned. Pick another background area if the texture changes.");
+    }
+    brushCursor.hidden = true;
+  } else if (activePointers.has(event.pointerId)) {
+    const wasSingle = activePointers.size === 1;
+    const origin = dragOrigin;
+    activePointers.delete(event.pointerId);
+    if (!cancelled && wasSingle && origin && !origin.moved && !origin.suppressTap && !headHitTest(pointerPoint(event))) {
+      const point = pointerPoint(event);
+      state.x = point.x;
+      state.y = point.y;
+      queueRender();
+    }
+    if (activePointers.size >= 2) beginPinch();
+    else if (activePointers.size === 1) {
+      dragOrigin = { point: [...activePointers.values()][0], x: state.x, y: state.y, moved: false, suppressTap: true };
+      pinchOrigin = null;
+    } else {
+      dragOrigin = null;
+      pinchOrigin = null;
+      canvas.classList.remove("dragging");
+    }
+  }
+  if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
 }
-canvas.addEventListener("pointerup", endDrag);
-canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("pointerup", event => endPointer(event));
+canvas.addEventListener("pointercancel", event => endPointer(event, true));
+
+function attachTransformHandle(button, type) {
+  let start = null;
+  button.addEventListener("pointerdown", event => {
+    if (!state.photoReady || state.repairMode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    button.setPointerCapture(event.pointerId);
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.left + state.x * rect.width;
+    const cy = rect.top + state.y * rect.height;
+    start = {
+      pointerId: event.pointerId,
+      cx, cy,
+      distance: Math.max(1, Math.hypot(event.clientX - cx, event.clientY - cy)),
+      angle: Math.atan2(event.clientY - cy, event.clientX - cx),
+      value: type === "scale" ? state.size : state.rotation
+    };
+    hintEl.classList.add("hidden");
+  });
+  button.addEventListener("pointermove", event => {
+    if (start?.pointerId !== event.pointerId) return;
+    if (type === "scale") {
+      const distance = Math.hypot(event.clientX - start.cx, event.clientY - start.cy);
+      state.size = clamp(start.value * distance / start.distance, 12, 85);
+    } else {
+      const angle = Math.atan2(event.clientY - start.cy, event.clientX - start.cx);
+      const turn = Math.atan2(Math.sin(angle - start.angle), Math.cos(angle - start.angle));
+      state.rotation = normalizeRotation(start.value + turn * 180 / Math.PI);
+    }
+    syncTransformControls();
+    queueRender();
+  });
+  const stop = event => {
+    if (start?.pointerId !== event.pointerId) return;
+    start = null;
+    if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+  };
+  button.addEventListener("pointerup", stop);
+  button.addEventListener("pointercancel", stop);
+}
+attachTransformHandle(scaleHandle, "scale");
+attachTransformHandle(rotateHandle, "rotate");
 
 canvas.addEventListener("keydown", event => {
-  if (!state.photo) return;
+  if (!state.photoReady) return;
   const step = event.shiftKey ? .02 : .005;
   if (event.key === "ArrowLeft") state.x -= step;
   else if (event.key === "ArrowRight") state.x += step;
@@ -239,18 +532,64 @@ canvas.addEventListener("keydown", event => {
 
 sizeSlider.addEventListener("input", () => {
   state.size = Number(sizeSlider.value);
-  sizeOutput.value = `${state.size}%`;
+  syncTransformControls();
   queueRender();
 });
 rotationSlider.addEventListener("input", () => {
   state.rotation = Number(rotationSlider.value);
-  rotationOutput.value = `${state.rotation}°`;
+  syncTransformControls();
   queueRender();
 });
 grayscaleToggle.addEventListener("change", () => { state.grayscale = grayscaleToggle.checked; queueRender(); });
 flipToggle.addEventListener("change", () => { state.flip = flipToggle.checked; queueRender(); });
 photoInput.addEventListener("change", event => loadUserPhoto(event.target.files?.[0]));
 resetBtn.addEventListener("click", resetHead);
+
+function setRepairMode(enabled) {
+  state.repairMode = enabled;
+  state.pickSource = enabled && !state.sourcePoint;
+  repairOptions.hidden = !enabled;
+  repairToggle.setAttribute("aria-pressed", String(enabled));
+  repairToggle.textContent = enabled ? "✓ Done retouching" : "✦ Clean stray hair";
+  stage.classList.toggle("repairing", enabled);
+  downloadBtn.disabled = enabled;
+  copyBtn.disabled = enabled;
+  resetBtn.disabled = enabled;
+  brushCursor.hidden = true;
+  if (enabled) {
+    hintEl.classList.add("hidden");
+    say(state.pickSource ? "Tap a clean background area to sample it." : "Brush over stray hair, or pick a new clean area.");
+  } else {
+    sourceMarker.hidden = true;
+    say("Retouch saved. Drag, resize, or rotate your Bitfoot, then download.");
+  }
+  queueRender();
+}
+
+repairToggle.addEventListener("click", () => {
+  if (state.photoReady) setRepairMode(!state.repairMode);
+});
+sourceButton.addEventListener("click", () => {
+  state.pickSource = true;
+  syncOverlays();
+  say("Tap a clean background area near the hair you want to hide.");
+});
+undoButton.addEventListener("click", () => {
+  if (undoButton.disabled) return;
+  repairCtx.clearRect(0, 0, repairCanvas.width, repairCanvas.height);
+  repairCtx.drawImage(strokeSource, 0, 0);
+  undoButton.disabled = true;
+  queueRender();
+  say("Last retouch stroke undone.");
+});
+brushSlider.addEventListener("input", () => {
+  brushOutput.value = `${brushSlider.value} px`;
+  if (!brushCursor.hidden) {
+    brushCursor.style.width = `${brushSlider.value}px`;
+    brushCursor.style.height = `${brushSlider.value}px`;
+  }
+});
+new ResizeObserver(syncOverlays).observe(canvas);
 
 stage.addEventListener("dragover", event => { event.preventDefault(); stage.classList.add("drag-over"); });
 stage.addEventListener("dragleave", () => stage.classList.remove("drag-over"));
@@ -261,7 +600,7 @@ stage.addEventListener("drop", event => {
 });
 
 downloadBtn.addEventListener("click", async () => {
-  if (!state.photo) return;
+  if (!state.photoReady || state.repairMode) return;
   render();
   const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
   if (!blob) { say("Export failed. Please try again."); return; }
@@ -275,7 +614,7 @@ downloadBtn.addEventListener("click", async () => {
 });
 
 copyBtn.addEventListener("click", async () => {
-  if (!state.photo) return;
+  if (!state.photoReady || state.repairMode) return;
   try {
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
     await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
