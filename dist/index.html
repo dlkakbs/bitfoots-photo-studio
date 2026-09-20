@@ -1,128 +1,79 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#111318" />
-    <meta name="description" content="Build full-body Bitfoots memes with the original 18 heads and eight story-driven templates." />
-    <title>Footprint Lab — Bitfoots Meme Maker</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23111318'/%3E%3Cpath d='M11 4h8v11h-3v4h-3v9H7v-10h2V9h2z' fill='%23ffbd2e'/%3E%3C/svg%3E" />
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="pixel-dust" aria-hidden="true"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#171a20" />
+  <meta name="description" content="Put an original Bitfoot head on your own photo. Position it, resize it, and download the result." />
+  <title>Footprint Lab — Put a Bitfoot on your photo</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23171a20'/%3E%3Cpath d='M11 4h8v11h-3v4h-3v9H7v-10h2V9h2z' fill='%23ffbd2e'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      <span><strong>FOOTPRINT LAB</strong><small>PHOTO EDITION</small></span>
+    </div>
+    <span class="header-claim">YOUR PHOTO. YOUR BITFOOT.</span>
+    <span class="header-count">18 ORIGINAL HEADS</span>
+  </header>
 
-    <header class="topbar">
-      <a class="brand" href="#maker" aria-label="Footprint Lab home">
-        <span class="footprint-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-        <span><b>FOOTPRINT LAB</b><small>BITFOOTS MEME MAKER</small></span>
-      </a>
-      <div class="header-note"><i></i> 18 ORIGINAL HEADS · COLLECTION BODY MODE</div>
-      <button class="button button-dark" id="randomizeTop" type="button">Surprise me <span>↻</span></button>
-    </header>
-
-    <main class="maker" id="maker">
-      <aside class="panel templates-panel" aria-labelledby="templatesTitle">
-        <div class="panel-title">
-          <span class="step">01</span>
-          <div><h1 id="templatesTitle">Pick the joke</h1><p>Eight Bitfoots situations, rebuilt as meme templates.</p></div>
+  <main class="workspace">
+    <section class="canvas-panel" aria-labelledby="mainTitle">
+      <div class="panel-head">
+        <div>
+          <span class="eyebrow">BITFOOTS PHOTO MAKER</span>
+          <h1 id="mainTitle">Become a Bitfoot.</h1>
+          <p>Place an original pixel head over your face. Your photo stays on your device.</p>
         </div>
-        <div class="template-grid" id="templateGrid" role="radiogroup" aria-label="Meme template"></div>
-        <label class="upload-card" for="backgroundUpload">
-          <span class="upload-plus">＋</span>
-          <span><b>Upload your own</b><small>PNG or JPG · stays on your device</small></span>
-          <input id="backgroundUpload" type="file" accept="image/png,image/jpeg,image/webp" />
-        </label>
-      </aside>
+        <span class="resolution" id="resolution">SAMPLE PHOTO</span>
+      </div>
 
-      <section class="preview-column" aria-labelledby="previewTitle">
-        <div class="preview-head">
-          <div>
-            <span class="kicker">LIVE MEME</span>
-            <h2 id="previewTitle">Shielded Forest</h2>
-          </div>
-          <span class="resolution" id="resolutionReadout">1800 × 1800</span>
+      <div class="stage" id="stage">
+        <canvas id="artboard" width="1500" height="1000" tabindex="0" aria-label="Photo composition. Drag the Bitfoot head to move it; use arrow keys for fine adjustments."></canvas>
+        <div class="stage-hint" id="stageHint"><span>✥</span> Drag the head into place</div>
+        <div class="stage-empty" id="stageEmpty" hidden>
+          <span class="empty-icon" aria-hidden="true">＋</span>
+          <strong>Add a photo to begin</strong>
+          <span>Portraits, desk shots, group photos — anything with room for a Bitfoot.</span>
         </div>
+      </div>
 
-        <div class="canvas-wrap" id="canvasWrap">
-          <canvas id="artboard" width="1800" height="1800" aria-label="Bitfoots meme preview"></canvas>
-          <div class="drag-hint" id="dragHint"><span>↔</span> drag the Bitfoot</div>
-          <div class="loading" id="loading" role="status"><i></i><b>ASSEMBLING BITFOOT</b></div>
+      <div class="stage-actions">
+        <label class="button button-primary upload-button" for="photoInput"><span>Use my photo</span><b>＋</b></label>
+        <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" />
+        <button class="button button-dark" id="downloadBtn" type="button"><span>Download PNG</span><b>↓</b></button>
+        <button class="button button-light" id="copyBtn" type="button">Copy</button>
+        <button class="button button-icon" id="resetBtn" type="button" aria-label="Reset head position">⌖</button>
+      </div>
+      <p class="status" id="status" role="status">Move the head by dragging it. Use the sliders for precise sizing and rotation.</p>
+    </section>
+
+    <aside class="control-panel" aria-labelledby="controlsTitle">
+      <div class="control-title">
+        <span class="eyebrow">01 / SELECT</span>
+        <h2 id="controlsTitle">Choose your Bitfoot</h2>
+        <p>Every head is the original file, with transparent margins trimmed for consistent sizing.</p>
+      </div>
+      <div class="head-grid" id="headGrid" role="radiogroup" aria-label="Choose a Bitfoot head"></div>
+
+      <div class="control-section">
+        <div class="section-title"><span class="eyebrow">02 / ADJUST</span><h3>Fit the photo</h3></div>
+        <label class="slider-label" for="sizeSlider"><span>Head size</span><output id="sizeOutput">35%</output></label>
+        <input id="sizeSlider" type="range" min="12" max="85" value="35" />
+        <label class="slider-label" for="rotationSlider"><span>Rotation</span><output id="rotationOutput">0°</output></label>
+        <input id="rotationSlider" type="range" min="-35" max="35" value="0" />
+        <div class="toggle-row">
+          <label><input id="grayscaleToggle" type="checkbox" checked /><span class="toggle"></span><span>Black & white photo</span></label>
+          <label><input id="flipToggle" type="checkbox" /><span class="toggle"></span><span>Flip head</span></label>
         </div>
+      </div>
 
-        <div class="action-row">
-          <button class="button button-primary" id="downloadBtn" type="button"><span>Download PNG</span><b>↓</b></button>
-          <button class="button" id="copyBtn" type="button">Copy image</button>
-          <button class="button square-button" id="resetPosition" type="button" aria-label="Reset character position">⌖</button>
-        </div>
-        <p class="status-line" id="statusLine" aria-live="polite"><i></i> Original head art, collection-style shoulders, outfits and cropped poses.</p>
-      </section>
+      <div class="privacy-note"><span aria-hidden="true">▣</span><p><strong>Private by design.</strong> Photos are edited in your browser and are never uploaded to Footprint Lab.</p></div>
+    </aside>
+  </main>
 
-      <aside class="panel editor-panel" aria-labelledby="editorTitle">
-        <div class="panel-title compact">
-          <span class="step">02</span>
-          <div><h2 id="editorTitle">Make it yours</h2><p>Character, pose and punchline.</p></div>
-        </div>
-
-        <section class="control-group">
-          <div class="control-heading"><h3>Bitfoot</h3><span id="headCount">01 / 18</span></div>
-          <div class="head-strip" id="headStrip" role="radiogroup" aria-label="Bitfoot head"></div>
-        </section>
-
-        <section class="control-group two-column">
-          <label><span>Outfit</span><select id="outfitSelect">
-            <option value="auto">Match head</option>
-            <option value="zcash">Shield tee</option>
-            <option value="hoodie">Hoodie</option>
-            <option value="suit">Suit</option>
-            <option value="robe">Forest robe</option>
-            <option value="sport">Sport kit</option>
-          </select></label>
-          <label><span>Pose</span><select id="poseSelect">
-            <option value="standing">Standing</option>
-            <option value="pointing">Pointing</option>
-            <option value="hands">Hands on hips</option>
-            <option value="walking">Walking away</option>
-            <option value="vouch">Pass the vouch</option>
-            <option value="drink">Hold a drink</option>
-          </select></label>
-        </section>
-
-        <section class="control-group copy-fields">
-          <label><span>Top text</span><textarea id="topText" rows="2" maxlength="90">WHEN THEY ASK FOR YOUR WALLET HISTORY</textarea></label>
-          <label><span>Bottom text</span><textarea id="bottomText" rows="2" maxlength="90">BUT YOU CAME SHIELDED</textarea></label>
-        </section>
-
-        <section class="control-group settings-grid">
-          <label><span>Text style</span><select id="textStyle">
-            <option value="classic">Classic meme</option>
-            <option value="boxed">Caption bars</option>
-            <option value="clean">Clean editorial</option>
-          </select></label>
-          <label><span>Format</span><select id="formatSelect">
-            <option value="square">Square · 1:1</option>
-            <option value="portrait">Portrait · 4:5</option>
-            <option value="wide">Wide · 16:9</option>
-          </select></label>
-          <label class="range-label"><span>Character size <output id="scaleValue">80%</output></span><input id="characterScale" type="range" min="48" max="120" value="80" /></label>
-          <label class="range-label"><span>Text size <output id="fontValue">68px</output></span><input id="fontSize" type="range" min="42" max="110" value="68" /></label>
-        </section>
-
-        <section class="control-group toggles">
-          <label><input id="flipCharacter" type="checkbox" /><span class="switch"></span><b>Flip character</b></label>
-          <label><input id="showTag" type="checkbox" checked /><span class="switch"></span><b>Footprint tag</b></label>
-        </section>
-      </aside>
-    </main>
-
-    <template id="templateCard">
-      <button class="template-card" type="button" role="radio" aria-checked="false">
-        <span class="template-thumb" aria-hidden="true"><i></i><i></i><i></i></span>
-        <span class="template-copy"><b></b><small></small></span>
-        <span class="template-number"></span>
-      </button>
-    </template>
-
-    <script src="./app.js"></script>
-  </body>
+  <script src="./app.js"></script>
+</body>
 </html>
